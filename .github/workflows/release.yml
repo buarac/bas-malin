@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: Semantic Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      - name: Get version from tag
+        id: version
+        run: |
+          VERSION=$(git describe --tags --exact-match 2>/dev/null || echo "unknown")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build with version
+        env:
+          NEXT_PUBLIC_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          echo "Building with version: $NEXT_PUBLIC_VERSION"
+          npm run build
+          
+      - name: Create build artifact
+        run: |
+          tar -czf build.tar.gz .next package.json package-lock.json prisma/ node_modules/@prisma/ node_modules/.prisma/
+          
+      - name: Upload build artifact to release
+        if: steps.version.outputs.version != 'unknown'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.version.outputs.version }} build.tar.gz --clobber
