@@ -43,7 +43,7 @@ export function SignInButton({ provider, children }: SignInButtonProps) {
       className="w-full"
     >
       <Icon className="mr-2 h-4 w-4" />
-      {children || `Sign in with ${provider.charAt(0).toUpperCase() + provider.slice(1)}`}
+      {children || `Continuer avec ${provider.charAt(0).toUpperCase() + provider.slice(1)}`}
     </Button>
   )
 }

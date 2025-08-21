@@ -50,8 +50,24 @@ model User {
   email         String?   @unique
   emailVerified DateTime? @map("email_verified")
   image         String?
-  accounts      Account[]
-  sessions      Session[]
+  
+  // Extensions Baš-Malin
+  passwordHash  String?
+  typeProfil    TypeProfil @default(OCCASIONNEL) @map("type_profil")
+  prenom        String?
+  nom           String?
+  locale        String     @default("fr-FR")
+  preferences   Json?      // UI preferences par profil
+  
+  derniereConnexionA DateTime? @map("derniere_connexion_a")
+  
+  // Relations NextAuth
+  accounts Account[]
+  sessions Session[]
+  
+  // Relations métier Baš-Malin
+  permissions       PermissionUtilisateur[]
+  activites         ActiviteUtilisateur[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -66,4 +82,84 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verificationtokens")
+}
+
+// Extensions Baš-Malin - Système de permissions
+model PermissionUtilisateur {
+  id             String   @id @default(cuid())
+  utilisateurId  String   @map("utilisateur_id")
+  typeRessource  TypeRessource @map("type_ressource")
+  permissions    String[] // Array de Permission enum values
+  accordePar     String   @map("accorde_par")
+  accordeA       DateTime @default(now()) @map("accorde_a")
+  expireA        DateTime? @map("expire_a")
+  
+  utilisateur User @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  
+  @@map("permissions_utilisateur")
+}
+
+// Activités utilisateur pour audit et analytics
+model ActiviteUtilisateur {
+  id                      String @id @default(cuid())
+  utilisateurId           String @map("utilisateur_id")
+  
+  typeActivite            TypeActivite @map("type_activite")
+  typeEntite              String? @map("type_entite") // "Recolte", "Intervention", etc.
+  idEntite                String? @map("id_entite")
+  
+  typeAppareil            TypeAppareil? @map("type_appareil")
+  contexteLocalisation    ContexteLocalisation? @map("contexte_localisation")
+  
+  metadonneesActivite     Json? @map("metadonnees_activite")
+  dureeSecondes           Int? @map("duree_secondes")
+  
+  geolocalisation         Json?
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  
+  utilisateur User @relation(fields: [utilisateurId], references: [id])
+  
+  @@map("activites_utilisateur")
+}
+
+// Enums
+enum TypeProfil {
+  EXPERT
+  OCCASIONNEL
+  READER
+}
+
+enum TypeRessource {
+  JARDIN
+  RECOLTE
+  INTERVENTION
+  ANALYSE
+  IOT
+  MCP
+}
+
+enum TypeActivite {
+  CONNEXION
+  DECONNEXION
+  CREATION
+  LECTURE
+  MISE_A_JOUR
+  SUPPRESSION
+  EXPORT
+  SYNC
+  SCAN_PHOTO
+  RECONNAISSANCE_IA
+}
+
+enum TypeAppareil {
+  MOBILE
+  DESKTOP
+  TV
+}
+
+enum ContexteLocalisation {
+  TERRAIN
+  MAISON
+  AUTRE
 }
