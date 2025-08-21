@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/buarac/bas-malin/compare/v1.0.0...v1.1.0) (2025-08-21)
+
+
+### Features
+
+* F1.2 - Synchronisation Multi-Device ([25c9789](https://github.com/buarac/bas-malin/commit/25c978998110fc931198b6064aff60d3975c01f9))
+
 # 1.0.0 (2025-08-21)
 
 
