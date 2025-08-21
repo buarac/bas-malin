@@ -68,6 +68,17 @@ model User {
   // Relations métier Baš-Malin
   permissions       PermissionUtilisateur[]
   activites         ActiviteUtilisateur[]
+  
+  // Relations avec nouveaux modèles
+  jardins           Jardin[]
+  instancesCulture  InstanceCulture[]
+  recoltes          Recolte[]
+  interventions     Intervention[]
+  alertesMeteo      AlerteMeteo[]
+  varitesCulture    VarieteCulture[]
+  varietesUtilisateur VarieteCultureUtilisateur[]
+  plansPlantation   PlanPlantation[]
+  resumesProduction ResumeProduction[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -162,4 +173,732 @@ enum ContexteLocalisation {
   TERRAIN
   MAISON
   AUTRE
+}
+
+// ===== DOMAINE JARDIN & GÉOGRAPHIE =====
+
+// Jardin principal
+model Jardin {
+  id              String @id @default(cuid())
+  proprietaireId  String @map("proprietaire_id")
+  nom             String
+  description     String?
+  
+  // Géolocalisation & climat
+  localisation    Json // {latitude, longitude, altitude, adresse, ville, region, pays, codePostal, zoneClimatique}
+  
+  // Caractéristiques physiques
+  surfaceTotaleM2 Decimal @db.Decimal(10,2) @map("surface_totale_m2")
+  typeSol         TypeSol @map("type_sol")
+  phSol           Decimal? @db.Decimal(3,1) @map("ph_sol")
+  sourceEau       SourceEau @map("source_eau")
+  
+  // Configuration spécifique Sacha (4 bacs + zones libres)
+  configAmenagement Json @map("config_amenagement") // {type: "structure", contenants: [{id, longueur_m, largeur_m, position: {x,y}}]}
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  proprietaire    User @relation(fields: [proprietaireId], references: [id])
+  zones           Zone[]
+  donneesMeteo    DonneeMeteo[]
+  alertesMeteo    AlerteMeteo[]
+  appareilsIot    AppareilIoT[]
+  plansPlantation PlanPlantation[]
+  
+  @@map("jardins")
+}
+
+// Zone de culture (4 bacs + zones libres)
+model Zone {
+  id          String @id @default(cuid())
+  jardinId    String @map("jardin_id")
+  nom         String // "Bac 1", "Bac 2", "Bac 3", "Bac 4", "Zone libre Nord"
+  typeZone    TypeZone @map("type_zone")
+  
+  // Géométrie et position
+  geometrie   Json // {type: "polygone", coordonnees: [[lat,lng]], surfaceM2}
+  
+  // Caractéristiques micro-climatiques
+  expositionSoleil ExpositionSoleil @map("exposition_soleil")
+  accesEau        AccesEau @map("acces_eau")
+  qualiteSol      Int @map("qualite_sol") // 1-5
+  
+  // État actuel
+  estActive            Boolean @default(true) @map("est_active")
+  cultureActuelleId    String? @map("culture_actuelle_id")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  jardin              Jardin @relation(fields: [jardinId], references: [id])
+  cultureActuelle     InstanceCulture? @relation("ZoneCultureActuelle", fields: [cultureActuelleId], references: [id])
+  instancesCulture    InstanceCulture[] @relation("ZoneInstancesCulture")
+  interventions       Intervention[]
+  recoltes           Recolte[]
+  appareilsIot       AppareilIoT[]
+  
+  @@map("zones")
+}
+
+// Enums pour jardin et zones
+enum TypeSol {
+  ARGILE
+  SABLE
+  LIMON
+  LIMON_FIN
+  TOURBE
+  CALCAIRE
+}
+
+enum SourceEau {
+  ROBINET
+  PUITS
+  EAU_PLUIE
+  MIXTE
+}
+
+enum TypeZone {
+  BAC           // Bacs structurés 8m x 0.8m
+  PARCELLE      // Zones délimitées
+  SERRE
+  ZONE_LIBRE    // Zones non structurées
+  ARBRE         // Arbres fruitiers
+  VIGNE         // Vignes
+}
+
+enum ExpositionSoleil {
+  PLEIN_SOLEIL
+  MI_OMBRE
+  OMBRE
+}
+
+enum AccesEau {
+  FACILE
+  MOYEN
+  DIFFICILE
+}
+
+// ===== DOMAINE CULTURES & VARIÉTÉS =====
+
+// Base de connaissances des variétés
+model VarieteCulture {
+  id              String @id @default(cuid())
+  nomScientifique String? @map("nom_scientifique")
+  nomCommun       String @map("nom_commun")
+  famille         String? // Solanaceae, Brassicaceae
+  categorie       CategorieCulture
+  
+  // Caractéristiques de culture
+  infosCulture    Json @map("infos_culture") // {profondeurPlantationCm, espacementCm, joursGermination, joursRecolte, plantesCompagnes[], plantesIncompatibles[], temperaturesOptimales, besoinsEau, exigencesSoleil, niveauDifficulte}
+  
+  // Calendrier par défaut (adaptable par région)
+  calendrierDefaut Json @map("calendrier_defaut") // {moisSemis[], moisPlantation[], moisRecolte[]}
+  
+  // Données enrichies par l'IA
+  insightsIA      Json? @map("insights_ia") // {tauxReussite, conditionsOptimales, problemesCourants, derniereMiseAJour}
+  
+  // Métadonnées
+  sourceDonnees   SourceDonnees @default(MANUEL) @map("source_donnees")
+  estPersonnalise Boolean @default(false) @map("est_personnalise")
+  creeParId       String? @map("cree_par_id")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  creePar                     User? @relation(fields: [creeParId], references: [id])
+  varietesUtilisateur         VarieteCultureUtilisateur[]
+  
+  @@map("varietes_culture")
+}
+
+// Personnalisation utilisateur des variétés
+model VarieteCultureUtilisateur {
+  id                      String @id @default(cuid())
+  utilisateurId           String @map("utilisateur_id")
+  varieteBaseId           String @map("variete_base_id")
+  
+  // Personnalisation utilisateur
+  nomPersonnalise         String? @map("nom_personnalise") // "Tomates cerises du garage"
+  notesPersonnelles       String? @map("notes_personnelles")
+  infosCulturePersonnalisees Json? @map("infos_culture_personnalisees") // Override des infos de base
+  
+  // Performance tracking personnalisé
+  performancePersonnelle  Json? @map("performance_personnelle") // {tauxReussite, rendementMoyenKg, meilleureDateRecolte, notes}
+  
+  // Photos personnalisées
+  photos                  Json? // [{url, legende, priseA}]
+  
+  estFavorite            Boolean @default(false) @map("est_favorite")
+  creeA                  DateTime @default(now()) @map("cree_a")
+  misAJourA              DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur    User @relation(fields: [utilisateurId], references: [id])
+  varieteBase    VarieteCulture @relation(fields: [varieteBaseId], references: [id])
+  instancesCulture InstanceCulture[]
+  
+  @@map("varietes_culture_utilisateur")
+}
+
+// Instance de culture en cours
+model InstanceCulture {
+  id              String @id @default(cuid())
+  utilisateurId   String @map("utilisateur_id")
+  varieteId       String @map("variete_id")
+  zoneId          String @map("zone_id")
+  
+  // Identification
+  nom             String // "Tomates Bac 1 - Printemps 2026"
+  codeLot         String? @map("code_lot") // QR code traçable
+  anneeSaison     Int @map("annee_saison")
+  
+  // Cycle de vie
+  etapeCycleVie   EtapeCycleVie @default(PLANIFIE) @map("etape_cycle_vie")
+  
+  // Dates clés (F2.2 - Planificateur de Semis)
+  dateSemisPrevue     DateTime? @map("date_semis_prevue")
+  dateSemisReelle     DateTime? @map("date_semis_reelle")
+  dateRepiquagePrevue DateTime? @map("date_repiquage_prevue")
+  dateRepiquageReelle DateTime? @map("date_repiquage_reelle")
+  datePremiereRecolte DateTime? @map("date_premiere_recolte")
+  dateDerniereRecolte DateTime? @map("date_derniere_recolte")
+  dateFinCycle        DateTime? @map("date_fin_cycle")
+  
+  // Quantités et métriques
+  quantitePlantee Int? @map("quantite_plantee")
+  quantiteGermee  Int? @map("quantite_germee")
+  quantiteRepiquee Int? @map("quantite_repiquee")
+  tauxSurvie      Decimal? @db.Decimal(3,2) @map("taux_survie")
+  
+  // Conditions spécifiques
+  conditionsCulture Json? @map("conditions_culture") // {typeContenant, preparationSol, fertilisantUtilise, systemeIrrigation}
+  
+  // Prédictions IA (F5.1 - Recommandations ML)
+  predictionsIA     Json? @map("predictions_ia") // {rendementAttenduKg, fenetreRecolteOptimale: {debut, fin}, facteursRisque[], scoreConfiance, derniereMiseAJour}
+  
+  // État actuel
+  estActive       Boolean @default(true) @map("est_active")
+  notes           String?
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur     User @relation(fields: [utilisateurId], references: [id])
+  variete         VarieteCultureUtilisateur @relation(fields: [varieteId], references: [id])
+  zone            Zone @relation("ZoneInstancesCulture", fields: [zoneId], references: [id])
+  zoneActuelle    Zone[] @relation("ZoneCultureActuelle")
+  interventions   Intervention[]
+  recoltes        Recolte[]
+  resumesProduction ResumeProduction[]
+  
+  @@map("instances_culture")
+}
+
+// Enums pour cultures
+enum CategorieCulture {
+  LEGUME
+  FRUIT
+  HERBE_AROMATIQUE
+  FLEUR
+  ARBRE
+  VIGNE
+}
+
+enum SourceDonnees {
+  MANUEL
+  API
+  GENERE_IA
+  SCAN_EMBALLAGE // F2.6 - Scan de graines
+}
+
+enum EtapeCycleVie {
+  PLANIFIE
+  SEME
+  GERME
+  REPIQUE
+  CROISSANCE
+  FLORAISON
+  FRUCTIFICATION
+  RECOLTE
+  TERMINE
+}
+
+// ===== DOMAINE PLANIFICATION & CYCLES =====
+
+// Plan de plantation
+model PlanPlantation {
+  id                    String @id @default(cuid())
+  utilisateurId         String @map("utilisateur_id")
+  jardinId              String @map("jardin_id")
+  
+  nom                   String // "Plan Saison 2026"
+  description           String?
+  anneeCible            Int @map("annee_cible")
+  
+  // Configuration du plan
+  strategiePlanification StrategiePlanification @default(MANUEL) @map("strategie_planification")
+  cycleRotationAnnees   Int @default(4) @map("cycle_rotation_annees")
+  
+  // Contraintes utilisateur
+  contraintes           Json? // {maxVarietesParZone, famillesPreferes[], varietesExclues[], limiteBudget, engagementTempsHeuresSemaine}
+  
+  // Métriques du plan (calculées par IA)
+  scoreOptimisation     Decimal? @db.Decimal(3,2) @map("score_optimisation")
+  rendementTotalAttendu Decimal? @db.Decimal(8,2) @map("rendement_total_attendu")
+  coutEstime            Decimal? @db.Decimal(10,2) @map("cout_estime")
+  heuresTravailEstimees Int? @map("heures_travail_estimees")
+  
+  // État
+  statut              StatutPlan @default(BROUILLON)
+  approuveA           DateTime? @map("approuve_a")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur User @relation(fields: [utilisateurId], references: [id])
+  jardin      Jardin @relation(fields: [jardinId], references: [id])
+  
+  @@map("plans_plantation")
+}
+
+// ===== DOMAINE INTERVENTIONS & ACTIVITÉS =====
+
+// Types d'intervention prédéfinis
+model TypeIntervention {
+  id                  String @id @default(cuid())
+  nom                 String // "Arrosage", "Traitement bio", "Taille"
+  categorie           CategorieIntervention
+  
+  // Paramètres par défaut
+  dureeDefautMinutes  Int? @map("duree_defaut_minutes")
+  necessiteVerifMeteo Boolean @default(false) @map("necessite_verif_meteo")
+  heureOptimaleJournee Json? @map("heure_optimale_journee") // ["matin", "soir"]
+  
+  // Templates de saisie (F2.4 - Journal de Bord)
+  modeleSaisie        Json? @map("modele_saisie") // {champsRequis[], champsOptionnels[], unitesMesure{}}
+  
+  // Fréquence suggérée
+  frequenceSuggeree   Json? @map("frequence_suggeree") // {intervalleJours, variationsSaisonnieres{}}
+  
+  estSysteme          Boolean @default(true) @map("est_systeme")
+  creeA               DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  interventions TypeInterventionIntervention[]
+  
+  @@map("types_intervention")
+}
+
+// Intervention réalisée
+model Intervention {
+  id                    String @id @default(cuid())
+  utilisateurId         String @map("utilisateur_id")
+  instanceCultureId     String? @map("instance_culture_id")
+  zoneId                String? @map("zone_id")
+  
+  // Timing
+  dateProgrammee        DateTime? @map("date_programmee")
+  dateReelle            DateTime @map("date_reelle")
+  dureeMinutes          Int? @map("duree_minutes")
+  
+  // Conditions contextuelles (enrichissement automatique météo)
+  conditionsMeteo       Json? @map("conditions_meteo") // {temperatureC, humiditePourcent, vitesseVentKmh, precipitationMm, descriptionMeteo}
+  
+  // Détails spécifiques
+  detailsIntervention   Json? @map("details_intervention") // {produitsUtilises[{nom, quantite, unite, cout}], equipementUtilise[], technique, difficulteRencontree}
+  
+  // Documentation (F2.4 - Photos avant/après)
+  photos                Json? // [{url, legende, typePhoto: "avant"|"pendant"|"apres", priseA}]
+  notes                 String?
+  
+  // Résultats et évaluation
+  noteEfficacite        Int? @map("note_efficacite") // 1-5
+  resultatsObserves     String? @map("resultats_observes")
+  suiviNecessaire       Boolean @default(false) @map("suivi_necessaire")
+  prochaineInterventionSuggeree DateTime? @map("prochaine_intervention_suggeree")
+  
+  // Métadonnées
+  sourceDonnees         SourceDonnees @default(MANUEL) @map("source_donnees")
+  geolocalisation       Json? // {latitude, longitude}
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur     User @relation(fields: [utilisateurId], references: [id])
+  instanceCulture InstanceCulture? @relation(fields: [instanceCultureId], references: [id])
+  zone            Zone? @relation(fields: [zoneId], references: [id])
+  typesIntervention TypeInterventionIntervention[]
+  
+  @@map("interventions")
+}
+
+// Table de jonction pour types d'intervention multiples
+model TypeInterventionIntervention {
+  id                 String @id @default(cuid())
+  interventionId     String @map("intervention_id")
+  typeInterventionId String @map("type_intervention_id")
+  
+  intervention       Intervention @relation(fields: [interventionId], references: [id])
+  typeIntervention   TypeIntervention @relation(fields: [typeInterventionId], references: [id])
+  
+  @@map("types_intervention_interventions")
+}
+
+// ===== DOMAINE RÉCOLTES & PRODUCTION =====
+
+// Récolte avec reconnaissance IA
+model Recolte {
+  id                String @id @default(cuid())
+  utilisateurId     String @map("utilisateur_id")
+  instanceCultureId String? @map("instance_culture_id")
+  zoneId            String @map("zone_id")
+  
+  // Timing
+  dateRecolte       DateTime @map("date_recolte")
+  heureRecolte      DateTime? @map("heure_recolte")
+  
+  // Quantités
+  poidsTotalKg      Decimal @db.Decimal(8,3) @map("poids_total_kg")
+  quantiteUnites    Int? @map("quantite_unites")
+  valeurMarcheEstimee Decimal? @db.Decimal(8,2) @map("valeur_marche_estimee")
+  
+  // Qualité
+  evaluationQualite Json? @map("evaluation_qualite") // {noteGenerale: 1-5, noteTaille: 1-5, noteGout: 1-5, noteApparence: 1-5, notes}
+  
+  // IA Recognition (F2.5 - MUST HAVE PRIORITÉ 1)
+  reconnaissanceIA  Json? @map("reconnaissance_ia") // {varieteDetectee, scoreConfiance, poidsEstime, typeRecipient, tempsTraitementMs, versionModele, correctionManuelle}
+  
+  // Documentation visuelle
+  photos            Json? // [{url, legende, analyseeIA, donneesReconnaissance}]
+  
+  // Destination
+  destinationUsage  DestinationUsage @default(CONSOMMATION) @map("destination_usage")
+  methodeStockage   String? @map("methode_stockage")
+  dureeStockagePrevueJours Int? @map("duree_stockage_prevue_jours")
+  
+  // Géolocalisation précise (mobile)
+  localisationRecolte Json? @map("localisation_recolte") // {latitude, longitude, precisionMetres}
+  
+  // Conditions
+  meteoARecolte     Json? @map("meteo_a_recolte")
+  joursDepuisDernierArrosage    Int? @map("jours_depuis_dernier_arrosage")
+  joursDepuisDernierTraitement  Int? @map("jours_depuis_dernier_traitement")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur     User @relation(fields: [utilisateurId], references: [id])
+  instanceCulture InstanceCulture? @relation(fields: [instanceCultureId], references: [id])
+  zone            Zone @relation(fields: [zoneId], references: [id])
+  
+  @@map("recoltes")
+}
+
+// Résumés de production pour analytics
+model ResumeProduction {
+  id                          String @id @default(cuid())
+  utilisateurId               String @map("utilisateur_id")
+  instanceCultureId           String? @map("instance_culture_id")
+  
+  // Période
+  periodeResume               PeriodeResume @map("periode_resume")
+  debutPeriode                DateTime @map("debut_periode")
+  finPeriode                  DateTime @map("fin_periode")
+  
+  // Métriques de production
+  poidsTotalKg                Decimal @db.Decimal(10,3) @map("poids_total_kg")
+  nombreTotalRecoltes         Int @map("nombre_total_recoltes")
+  rendementQuotidienMoyen     Decimal @db.Decimal(8,3) @map("rendement_quotidien_moyen")
+  datePicProduction           DateTime? @map("date_pic_production")
+  
+  // Métriques économiques
+  valeurTotaleEstimee         Decimal? @db.Decimal(10,2) @map("valeur_totale_estimee")
+  coutParKg                   Decimal? @db.Decimal(6,2) @map("cout_par_kg")
+  pourcentageROI              Decimal? @db.Decimal(5,2) @map("pourcentage_roi")
+  
+  // Métriques qualité
+  noteQualiteMoyenne          Decimal? @db.Decimal(3,2) @map("note_qualite_moyenne")
+  scoreRegulariteQualite      Decimal? @db.Decimal(3,2) @map("score_regularite_qualite")
+  
+  // Comparaisons
+  vsPeriodePrecedentePourcent Decimal? @db.Decimal(5,2) @map("vs_periode_precedente_pourcent")
+  vsRendementPreditPourcent   Decimal? @db.Decimal(5,2) @map("vs_rendement_predit_pourcent")
+  
+  // Auto-calculé par job/trigger
+  calculeA        DateTime @map("calcule_a")
+  creeA           DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  utilisateur     User @relation(fields: [utilisateurId], references: [id])
+  instanceCulture InstanceCulture? @relation(fields: [instanceCultureId], references: [id])
+  
+  @@map("resumes_production")
+}
+
+// Enums pour interventions et récoltes
+enum StrategiePlanification {
+  MANUEL
+  OPTIMISE_IA
+  HYBRIDE
+}
+
+enum StatutPlan {
+  BROUILLON
+  ACTIF
+  TERMINE
+  ARCHIVE
+}
+
+enum CategorieIntervention {
+  ARROSAGE
+  FERTILISATION
+  TRAITEMENT
+  TAILLE
+  DESHERBAGE
+  RECOLTE
+  MAINTENANCE
+  OBSERVATION
+}
+
+enum DestinationUsage {
+  CONSOMMATION
+  STOCKAGE
+  TRANSFORMATION
+  PARTAGE
+  VENTE
+  COMPOST
+}
+
+enum PeriodeResume {
+  HEBDOMADAIRE
+  MENSUEL
+  SAISONNIER
+  ANNUEL
+}
+
+// ===== DOMAINE MÉTÉO & ENVIRONNEMENT =====
+
+// Données météorologiques
+model DonneeMeteo {
+  id                      String @id @default(cuid())
+  jardinId                String @map("jardin_id")
+  
+  // Timestamp et source
+  enregistreA             DateTime @map("enregistre_a")
+  sourceDonnees           SourceDonneesMeteo @map("source_donnees")
+  fournisseurSource       String @map("fournisseur_source") // "WeatherAPI", "ESP32-01"
+  
+  // Données météorologiques
+  temperatureC            Decimal? @db.Decimal(4,1) @map("temperature_c")
+  humiditePourcent        Int? @map("humidite_pourcent")
+  pressionHpa             Decimal? @db.Decimal(6,1) @map("pression_hpa")
+  vitesseVentKmh          Decimal? @db.Decimal(4,1) @map("vitesse_vent_kmh")
+  directionVentDegres     Int? @map("direction_vent_degres")
+  precipitationMm         Decimal? @db.Decimal(6,2) @map("precipitation_mm")
+  indiceUV                Decimal? @db.Decimal(3,1) @map("indice_uv")
+  
+  // Conditions
+  conditionMeteo          String? @map("condition_meteo") // "ensoleille", "nuageux", "pluvieux"
+  visibiliteKm            Decimal? @db.Decimal(4,1) @map("visibilite_km")
+  couvertureNuageusePourcent Int? @map("couverture_nuageuse_pourcent")
+  
+  // Prévisions (si applicable)
+  estPrevision            Boolean @default(false) @map("est_prevision")
+  horizonPrevisionHeures  Int? @map("horizon_prevision_heures")
+  scoreConfiance          Decimal? @db.Decimal(3,2) @map("score_confiance")
+  
+  // Données sol (capteurs IoT futurs)
+  temperatureSolC         Decimal? @db.Decimal(4,1) @map("temperature_sol_c")
+  humiditeSolPourcent     Int? @map("humidite_sol_pourcent")
+  phSol                   Decimal? @db.Decimal(3,1) @map("ph_sol")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  jardin Jardin @relation(fields: [jardinId], references: [id])
+  
+  @@map("donnees_meteo")
+}
+
+// Alertes météorologiques
+model AlerteMeteo {
+  id                      String @id @default(cuid())
+  utilisateurId           String @map("utilisateur_id")
+  jardinId                String @map("jardin_id")
+  
+  // Type d'alerte
+  typeAlerte              TypeAlerte @map("type_alerte")
+  severite                Severite
+  
+  // Timing
+  debutAlerte             DateTime @map("debut_alerte")
+  finAlerte               DateTime @map("fin_alerte")
+  emiseA                  DateTime @map("emise_a")
+  
+  // Détails
+  titre                   String
+  description             String?
+  conditionsAffectees     Json? @map("conditions_affectees")
+  
+  // Recommandations (F4.2 - Intelligence)
+  recommandations         Json? // [{action, priorite, delai}]
+  
+  // État
+  statut                  StatutAlerte @default(ACTIVE)
+  acquitteeA              DateTime? @map("acquittee_a")
+  actionsUtilisateurPrises String? @map("actions_utilisateur_prises")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  utilisateur User @relation(fields: [utilisateurId], references: [id])
+  jardin      Jardin @relation(fields: [jardinId], references: [id])
+  
+  @@map("alertes_meteo")
+}
+
+// ===== DOMAINE IOT & CAPTEURS =====
+
+// Appareils IoT (ESP32 + Home Assistant)
+model AppareilIoT {
+  id                      String @id @default(cuid())
+  jardinId                String @map("jardin_id")
+  zoneId                  String? @map("zone_id")
+  
+  // Identification
+  typeAppareil            TypeAppareilIoT @map("type_appareil")
+  modele                  String // "ESP32-DevKit", "Capteur Humidité Sol v2"
+  numeroSerie             String @unique @map("numero_serie")
+  adresseMac              String? @map("adresse_mac")
+  
+  // Configuration réseau
+  adresseIP               String? @map("adresse_ip")
+  typeConnexion           TypeConnexionIoT @map("type_connexion")
+  
+  // Localisation physique
+  localisationInstallation Json? @map("localisation_installation") // {zoneId, description, coordonnees: {x,y,z}, hauteurInstallationCm}
+  
+  // Capacités
+  typesCapteurs           String[] @map("types_capteurs") // ["temperature", "humidite", "humidite_sol"]
+  frequenceMesureSecondes Int @map("frequence_mesure_secondes")
+  alimenteBatterie        Boolean @default(false) @map("alimente_batterie")
+  
+  // État
+  statut                  StatutAppareilIoT @default(ACTIF)
+  derniereVueA            DateTime? @map("derniere_vue_a")
+  versionFirmware         String? @map("version_firmware")
+  niveauBatteriePourcent  Int? @map("niveau_batterie_pourcent")
+  
+  // Home Assistant Integration
+  entiteHomeAssistant     String? @map("entite_home_assistant") // entity_id dans HA
+  configHomeAssistant     Json?   @map("config_home_assistant") // Configuration spécifique HA
+  
+  // Maintenance
+  installeA               DateTime? @map("installe_a")
+  derniereMaintenanceA    DateTime? @map("derniere_maintenance_a")
+  prochaineMaintenanceDue DateTime? @map("prochaine_maintenance_due")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  jardin          Jardin @relation(fields: [jardinId], references: [id])
+  zone            Zone? @relation(fields: [zoneId], references: [id])
+  lecturesCapteur LectureCapteur[]
+  
+  @@map("appareils_iot")
+}
+
+// Lectures de capteurs (time-series)
+model LectureCapteur {
+  id                      String @id @default(cuid())
+  appareilId              String @map("appareil_id")
+  
+  // Timing
+  mesureA                 DateTime @map("mesure_a")
+  recuA                   DateTime @default(now()) @map("recu_a")
+  
+  // Données du capteur
+  typeCapteur             String @map("type_capteur") // "temperature", "humidite_sol"
+  valeur                  Decimal @db.Decimal(12,4)
+  unite                   String
+  
+  // Qualité des données
+  scoreQualite            Decimal? @db.Decimal(3,2) @map("score_qualite") // 0.0 à 1.0
+  offsetCalibration       Decimal? @db.Decimal(8,4) @map("offset_calibration")
+  
+  // Contexte
+  conditionsEnvironnementales Json? @map("conditions_environnementales") // Autres capteurs au même moment
+  
+  // Métadonnées
+  valeurBrute             Decimal? @db.Decimal(12,4) @map("valeur_brute") // Avant calibration
+  traitementApplique      String[] @map("traitement_applique")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  appareil AppareilIoT @relation(fields: [appareilId], references: [id])
+  
+  @@map("lectures_capteur")
+}
+
+// Enums pour météo et IoT
+enum SourceDonneesMeteo {
+  API
+  CAPTEUR
+  MANUEL
+}
+
+enum TypeAlerte {
+  GEL
+  CANICULE
+  PLUIE_FORTE
+  SECHERESSE
+  ORAGE
+  GRELE
+  VENT_FORT
+}
+
+enum Severite {
+  FAIBLE
+  MOYEN
+  ELEVE
+  CRITIQUE
+}
+
+enum StatutAlerte {
+  ACTIVE
+  ACQUITTEE
+  RESOLUE
+  EXPIREE
+}
+
+enum TypeAppareilIoT {
+  CAPTEUR
+  ACTIONNEUR
+  CONTROLEUR
+}
+
+enum TypeConnexionIoT {
+  WIFI
+  ETHERNET
+  LORA
+  ZIGBEE
+  THREAD
+}
+
+enum StatutAppareilIoT {
+  ACTIF
+  INACTIF
+  MAINTENANCE
+  ERREUR
+  HORS_LIGNE
 }

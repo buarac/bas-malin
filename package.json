@@ -11,7 +11,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "create-test-users": "npx tsx scripts/create-test-users.ts"
+    "create-test-users": "npx tsx scripts/create-test-users.ts",
+    "db:seed": "npx tsx prisma/seed.ts",
+    "db:reset": "npx prisma migrate reset && npm run db:seed"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",
