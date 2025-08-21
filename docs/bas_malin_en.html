@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Baš-Malin - Your Smart Garden</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --mocha-mousse: #8B6F47;
+            --tech-orange: #FF6B35;
+            --nature-green: #2D5D31;
+            --dark-bg: #1a1a1a;
+            --light-bg: #fafafa;
+            --text-primary: #2d2d2d;
+            --text-secondary: #666;
+            --gradient-primary: linear-gradient(135deg, var(--mocha-mousse), var(--nature-green));
+            --gradient-tech: linear-gradient(135deg, var(--tech-orange), #FF8A65);
+            --shadow-soft: 0 8px 32px rgba(0,0,0,0.1);
+            --border-radius: 16px;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background: var(--light-bg);
+            overflow-x: hidden;
+        }
+
+        .page {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: var(--shadow-soft);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+        }
+
+        /* Header Section */
+        .header {
+            background: var(--gradient-primary);
+            color: white;
+            padding: 3rem 2rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -20%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30%;
+            left: -10%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 107, 53, 0.3);
+            border-radius: 50%;
+            animation: float 8s ease-in-out infinite reverse;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .logo {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 2;
+            letter-spacing: -2px;
+        }
+
+        .logo .emoji {
+            font-size: 2.5rem;
+            margin-right: 1rem;
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            font-weight: 300;
+            opacity: 0.9;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 4rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #fafafa 0%, #f0f9f0 100%);
+        }
+
+        .hero-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.8rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: var(--text-primary);
+            line-height: 1.2;
+        }
+
+        .hero-subtitle {
+            font-size: 1.4rem;
+            color: var(--tech-orange);
+            font-weight: 600;
+            margin-bottom: 3rem;
+        }
+
+        .devices-showcase {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin: 2rem 0;
+            flex-wrap: wrap;
+        }
+
+        .device-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            text-align: center;
+            min-width: 150px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .device-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+        }
+
+        .device-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .device-name {
+            font-weight: 600;
+            color: var(--mocha-mousse);
+        }
+
+        /* Pillars Section */
+        .pillars {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .section-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            color: var(--text-primary);
+        }
+
+        .pillars-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .pillar-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 2rem;
+            box-shadow: var(--shadow-soft);
+            border-top: 4px solid;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pillar-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100px;
+            height: 100px;
+            background: currentColor;
+            opacity: 0.05;
+            border-radius: 50%;
+            transform: translate(30px, -30px);
+        }
+
+        .pillar-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.15);
+        }
+
+        .pillar-produce {
+            border-top-color: var(--nature-green);
+            color: var(--nature-green);
+        }
+
+        .pillar-understand {
+            border-top-color: var(--tech-orange);
+            color: var(--tech-orange);
+        }
+
+        .pillar-optimize {
+            border-top-color: var(--mocha-mousse);
+            color: var(--mocha-mousse);
+        }
+
+        .pillar-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .pillar-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .pillar-description {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+
+        .pillar-features {
+            list-style: none;
+        }
+
+        .pillar-features li {
+            padding: 0.5rem 0;
+            position: relative;
+            padding-left: 2rem;
+            color: var(--text-primary);
+        }
+
+        .pillar-features li::before {
+            content: '✨';
+            position: absolute;
+            left: 0;
+            top: 0.5rem;
+        }
+
+        /* Why Choose Section */
+        .why-choose {
+            padding: 4rem 2rem;
+            background: var(--dark-bg);
+            color: white;
+        }
+
+        .why-choose .section-title {
+            color: white;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            transition: background 0.3s ease;
+        }
+
+        .feature-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .feature-check {
+            font-size: 1.5rem;
+            color: var(--tech-orange);
+        }
+
+        .feature-text {
+            font-weight: 500;
+        }
+
+        /* Differentiators Section */
+        .differentiators {
+            padding: 4rem 2rem;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9f7ef 100%);
+        }
+
+        .diff-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .diff-card {
+            background: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow-soft);
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .diff-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .diff-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            background: var(--gradient-tech);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .diff-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .diff-description {
+            color: var(--text-secondary);
+        }
+
+        /* Results Section */
+        .results {
+            padding: 4rem 2rem;
+            background: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .stat-card {
+            text-align: center;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            background: var(--gradient-primary);
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* CTA Section */
+        .cta {
+            padding: 4rem 2rem;
+            background: var(--gradient-tech);
+            text-align: center;
+            color: white;
+        }
+
+        .cta-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .cta-subtitle {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+
+        .demo-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+        }
+
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4rem;
+            color: var(--tech-orange);
+        }
+
+        .demo-text {
+            text-align: left;
+        }
+
+        .demo-text h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .demo-text p {
+            opacity: 0.8;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: var(--tech-orange);
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+
+        /* Footer */
+        .footer {
+            padding: 2rem;
+            background: var(--dark-bg);
+            color: white;
+            text-align: center;
+        }
+
+        .contact-info {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .contact-icon {
+            color: var(--tech-orange);
+        }
+
+        .footer-tagline {
+            margin-top: 1rem;
+            opacity: 0.7;
+            font-style: italic;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2.5rem;
+            }
+
+            .hero-title {
+                font-size: 2rem;
+            }
+
+            .hero-subtitle {
+                font-size: 1.2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .pillars-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .demo-section {
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+
+            .demo-text {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- Header -->
+        <header class="header">
+            <h1 class="logo">
+                <span class="emoji">🌱🤖</span>BAŠ-MALIN
+            </h1>
+            <p class="tagline">Your Smart Garden</p>
+        </header>
+
+        <!-- Hero Section -->
+        <section class="hero">
+            <h2 class="hero-title">Transform your gardening passion into INTELLIGENCE</h2>
+            <p class="hero-subtitle">The first AI-powered smart garden ecosystem</p>
+            
+            <div class="devices-showcase">
+                <div class="device-card">
+                    <div class="device-icon">📱</div>
+                    <div class="device-name">Mobile</div>
+                    <div>Field</div>
+                </div>
+                <div class="device-card">
+                    <div class="device-icon">💻</div>
+                    <div class="device-name">Desktop</div>
+                    <div>Home</div>
+                </div>
+                <div class="device-card">
+                    <div class="device-icon">📺</div>
+                    <div class="device-name">TV</div>
+                    <div>Showcase</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pillars Section -->
+        <section class="pillars">
+            <h2 class="section-title">🎯 REVOLUTIONIZE YOUR GARDENING APPROACH</h2>
+            
+            <div class="pillars-grid">
+                <div class="pillar-card pillar-produce">
+                    <div class="pillar-icon">🌱</div>
+                    <h3 class="pillar-title">PRODUCE</h3>
+                    <p class="pillar-description">From seed to plate, guided by intelligence</p>
+                    <ul class="pillar-features">
+                        <li><strong>Smart Planner</strong> : Cultivation calendar adapted to YOUR climate</li>
+                        <li><strong>Visual Recognition</strong> : Scan seeds, plants, harvests automatically</li>
+                        <li><strong>Complete Traceability</strong> : From seed to storage, everything is tracked</li>
+                        <li><strong>Mobile-first</strong> : Direct field input, intelligent synchronization</li>
+                    </ul>
+                </div>
+
+                <div class="pillar-card pillar-understand">
+                    <div class="pillar-icon">🧠</div>
+                    <h3 class="pillar-title">UNDERSTAND</h3>
+                    <p class="pillar-description">AI transforms your data into gardening wisdom</p>
+                    <ul class="pillar-features">
+                        <li><strong>Pattern Mining</strong> : Discover invisible correlations in your practices</li>
+                        <li><strong>Predictive Analytics</strong> : "Your tomatoes will yield +23% with this weather"</li>
+                        <li><strong>Conversational AI Assistant</strong> : "Why aren't my eggplants growing?"</li>
+                        <li><strong>Automatic Insights</strong> : Recommendations based on YOUR specific data</li>
+                    </ul>
+                </div>
+
+                <div class="pillar-card pillar-optimize">
+                    <div class="pillar-icon">⚡</div>
+                    <h3 class="pillar-title">OPTIMIZE</h3>
+                    <p class="pillar-description">The garden that improves itself</p>
+                    <ul class="pillar-features">
+                        <li><strong>Smart Alerts</strong> : Weather, diseases, personalized cultural calendar</li>
+                        <li><strong>4-year Planning</strong> : Optimal rotations calculated by algorithm</li>
+                        <li><strong>IoT Ready</strong> : ESP32 sensors + Home Assistant natively integrated</li>
+                        <li><strong>Automation</strong> : Watering, alerts, interventions triggered intelligently</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Choose Section -->
+        <section class="why-choose">
+            <h2 class="section-title">🚀 WHY CHOOSE BAŠ-MALIN?</h2>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">NATIVE AI integrated</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">Coherent multi-device</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">MCP Compatible</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">Multi-language FR/SR</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">ESP32 IoT Ready</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">100% local data</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">Computer Vision</span>
+                </div>
+                <div class="feature-item">
+                    <span class="feature-check">✅</span>
+                    <span class="feature-text">Scalable architecture</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Differentiators Section -->
+        <section class="differentiators">
+            <h2 class="section-title">🎯 UNIQUE DIFFERENTIATORS</h2>
+            
+            <div class="diff-grid">
+                <div class="diff-card">
+                    <div class="diff-icon">🧬</div>
+                    <h3 class="diff-title">AI Hyper-personalization</h3>
+                    <p class="diff-description">Your recommendations evolve with YOUR successes and failures. Every advice is calibrated to your soil, your climate, your preferences.</p>
+                </div>
+
+                <div class="diff-card">
+                    <div class="diff-icon">📱</div>
+                    <h3 class="diff-title">Multi-Context Ecosystem</h3>
+                    <p class="diff-description"><strong>Mobile</strong> : Field companion • <strong>Desktop</strong> : Command center • <strong>TV</strong> : Showcase interface</p>
+                </div>
+
+                <div class="diff-card">
+                    <div class="diff-icon">🔗</div>
+                    <h3 class="diff-title">Open Connectivity</h3>
+                    <p class="diff-description">Integrated MCP server: Query your garden via Claude, ChatGPT or any external AI with complete context.</p>
+                </div>
+
+                <div class="diff-card">
+                    <div class="diff-icon">🌍</div>
+                    <h3 class="diff-title">Global Vision, Local Action</h3>
+                    <p class="diff-description">Native multi-language support with local hosting. YOUR data stays at YOUR HOME.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results">
+            <h2 class="section-title">📈 EXPECTED RESULTS</h2>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">+35%</div>
+                    <div class="stat-label">crop rotation optimization</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">+50%</div>
+                    <div class="stat-label">precision in harvest predictions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">+60%</div>
+                    <div class="stat-label">time saved on planning</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">+40%</div>
+                    <div class="stat-label">reduction in plant health issues</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="cta">
+            <h2 class="cta-title">🚀 JOIN THE SMART GARDENING REVOLUTION</h2>
+            <p class="cta-subtitle">"From Passion to Precision"</p>
+            
+            <div class="demo-section">
+                <div class="qr-placeholder">
+                    📱
+                </div>
+                <div class="demo-text">
+                    <h3>📱 INTERACTIVE DEMO</h3>
+                    <p>Scan to discover the mobile interface</p>
+                    <p><strong>bas-malin.com/demo</strong></p>
+                </div>
+            </div>
+
+            <a href="#contact" class="cta-button">TRANSFORM MY GARDEN 🚀</a>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer" id="contact">
+            <div class="contact-info">
+                <div class="contact-item">
+                    <span class="contact-icon">🌍</span>
+                    <span>www.bas-malin.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon">📧</span>
+                    <span>hello@bas-malin.com</span>
+                </div>
+                <div class="contact-item">
+                    <span class="contact-icon">📱</span>
+                    <span>bas-malin.com/demo</span>
+                </div>
+            </div>
+            
+            <p class="footer-tagline">Baš-Malin: Artificial intelligence serving your gardening intelligence 🌱✨</p>
+            <p>© 2025 Baš-Malin • Smart Garden • Made with ❤️ for passionate gardeners</p>
+        </footer>
+    </div>
+</body>
+</html>
