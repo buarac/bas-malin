@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/buarac/bas-malin/compare/v1.1.0...v1.2.0) (2025-08-21)
+
+
+### Features
+
+* F1.3 - Base de Données & Modèles Core ([b426ff9](https://github.com/buarac/bas-malin/commit/b426ff966b68d84bd1dd887f77af3f69139c2b00))
+
 # [1.1.0](https://github.com/buarac/bas-malin/compare/v1.0.0...v1.1.0) (2025-08-21)
 
 
