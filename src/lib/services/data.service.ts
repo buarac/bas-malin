@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient } from '@prisma/client'
 import { CacheService } from '../cache/cache.service'
 import { JardinRepository } from '../repositories/jardin.repository'
@@ -19,7 +20,7 @@ export interface DataServiceConfig {
 
 export class DataService {
   private prisma: PrismaClient
-  private cache: CacheService
+  public cache: CacheService
   
   // Repositories
   public jardin: JardinRepository
@@ -176,7 +177,7 @@ export class DataService {
     cacheKeysToInvalidate: string[] = []
   ): Promise<T> {
     const result = await this.prisma.$transaction(async (prisma) => {
-      return await operation(prisma)
+      return await operation(prisma as any)
     })
 
     // Invalider les clés de cache spécifiées

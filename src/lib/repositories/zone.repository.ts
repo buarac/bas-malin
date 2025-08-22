@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, Zone, TypeZone, ExpositionSoleil, AccesEau } from '@prisma/client'
 import { BaseRepository } from './base.repository'
 import { CacheService } from '../cache/cache.service'

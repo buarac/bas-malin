@@ -2,6 +2,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
+@custom-variant jardin (&:is(.jardin *));
 
 @theme inline {
   --color-background: var(--background);
@@ -41,6 +42,57 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Design System Colors - Jardin Theme */
+  --color-jardin-green-50: #f0f9f0;
+  --color-jardin-green-500: #22c55e;
+  --color-jardin-green-900: #14532d;
+  --color-jardin-earth-100: #f5f3f0;
+  --color-jardin-earth-500: #8b5a3c;
+  --color-jardin-earth-800: #4a2c1a;
+  --color-jardin-sky-500: #0ea5e9;
+  
+  /* Semantic Colors */
+  --color-success: #22c55e;
+  --color-success-light: #dcfce7;
+  --color-success-dark: #166534;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-warning-dark: #92400e;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-error-dark: #991b1b;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+  --color-info-dark: #1d4ed8;
+
+  /* Responsive Typography */
+  --font-size-h1-mobile: clamp(1.75rem, 4vw, 2.5rem);
+  --font-size-h2-mobile: clamp(1.5rem, 3.5vw, 2rem);
+  --font-size-h3-mobile: clamp(1.25rem, 3vw, 1.75rem);
+  --font-size-body-mobile: clamp(0.875rem, 2vw, 1rem);
+  
+  --font-size-h1-desktop: clamp(2.5rem, 5vw, 4rem);
+  --font-size-h2-desktop: clamp(2rem, 4vw, 3rem);
+  --font-size-h3-desktop: clamp(1.75rem, 3vw, 2.25rem);
+  --font-size-body-desktop: clamp(1rem, 1.5vw, 1.125rem);
+  
+  --font-size-h1-tv: clamp(4rem, 6vw, 8rem);
+  --font-size-h2-tv: clamp(3rem, 5vw, 6rem);
+  --font-size-h3-tv: clamp(2.25rem, 4vw, 4.5rem);
+  --font-size-body-tv: clamp(1.5rem, 2vw, 2rem);
+
+  /* Touch/Click Targets */
+  --touch-target-mobile: 44px;
+  --click-target-desktop: 32px;
+  --focus-target-tv: 60px;
+
+  /* Custom Theme Variables (can be overridden) */
+  --primary-color: var(--color-primary);
+  --accent-color: var(--color-accent);
+  --border-radius-scale: md;
+  --font-size-scale: md;
+  --spacing-density: comfortable;
 }
 
 :root {
@@ -112,11 +164,128 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.jardin {
+  --background: #f0f9f0;
+  --foreground: #14532d;
+  --card: #ffffff;
+  --card-foreground: #14532d;
+  --popover: #ffffff;
+  --popover-foreground: #14532d;
+  --primary: #22c55e;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f3f0;
+  --secondary-foreground: #8b5a3c;
+  --muted: #dcf2dc;
+  --muted-foreground: #166534;
+  --accent: #0ea5e9;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --border: #bde5bd;
+  --input: #ffffff;
+  --ring: #22c55e;
+  --chart-1: #22c55e;
+  --chart-2: #8b5a3c;
+  --chart-3: #0ea5e9;
+  --chart-4: #f59e0b;
+  --chart-5: #ef4444;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #14532d;
+  --sidebar-primary: #22c55e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f5f3f0;
+  --sidebar-accent-foreground: #8b5a3c;
+  --sidebar-border: #bde5bd;
+  --sidebar-ring: #22c55e;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    font-variant-ligatures: normal;
+  }
+
+  /* Typography responsive classes */
+  .text-h1-responsive {
+    font-size: var(--font-size-h1-mobile);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .text-h2-responsive {
+    font-size: var(--font-size-h2-mobile);
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  
+  .text-h3-responsive {
+    font-size: var(--font-size-h3-mobile);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  
+  .text-body-responsive {
+    font-size: var(--font-size-body-mobile);
+    line-height: 1.5;
+  }
+
+  @media (min-width: 768px) {
+    .text-h1-responsive { font-size: var(--font-size-h1-desktop); }
+    .text-h2-responsive { font-size: var(--font-size-h2-desktop); }
+    .text-h3-responsive { font-size: var(--font-size-h3-desktop); }
+    .text-body-responsive { font-size: var(--font-size-body-desktop); }
+  }
+
+  @media (min-width: 1920px) {
+    .text-h1-responsive { font-size: var(--font-size-h1-tv); }
+    .text-h2-responsive { font-size: var(--font-size-h2-tv); }
+    .text-h3-responsive { font-size: var(--font-size-h3-tv); }
+    .text-body-responsive { font-size: var(--font-size-body-tv); }
+  }
+
+  /* Touch/Click targets */
+  .touch-target {
+    min-height: var(--touch-target-mobile);
+    min-width: var(--touch-target-mobile);
+  }
+
+  @media (min-width: 768px) {
+    .touch-target {
+      min-height: var(--click-target-desktop);
+      min-width: var(--click-target-desktop);
+    }
+  }
+
+  @media (min-width: 1920px) {
+    .touch-target {
+      min-height: var(--focus-target-tv);
+      min-width: var(--focus-target-tv);
+    }
+  }
+
+  /* Accessible focus styles */
+  .focus-visible:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring;
+  }
+
+  /* Jardin theme specific styles */
+  .jardin .bg-gradient-jardin {
+    background: linear-gradient(135deg, #f0f9f0 0%, #dcf2dc 100%);
+  }
+
+  /* Smooth transitions */
+  .transition-theme {
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+
+  /* Safe area for TV */
+  @media (min-width: 1920px) {
+    .safe-area-tv {
+      padding: calc(10vh) calc(10vw);
+    }
   }
 }

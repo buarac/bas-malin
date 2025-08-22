@@ -15,7 +15,7 @@ export abstract class BaseRepository<TModel> {
   /**
    * Génère une clé de cache standardisée
    */
-  protected getCacheKey(operation: string, params: Record<string, any> = {}): string {
+  protected getCacheKey(operation: string, params: Record<string, unknown> = {}): string {
     const paramString = Object.keys(params)
       .sort()
       .map(key => `${key}:${params[key]}`)
@@ -52,7 +52,7 @@ export abstract class BaseRepository<TModel> {
     return this.getOrSetCache(
       cacheKey,
       async () => {
-        // @ts-ignore - Generic Prisma call
+        // @ts-expect-error - Generic Prisma call
         return await this.prisma[this.modelName].findUnique({
           where: { id }
         })
@@ -64,13 +64,13 @@ export abstract class BaseRepository<TModel> {
   /**
    * Méthode de base pour compter avec cache
    */
-  async count(where: any = {}, ttlSeconds: number = 600): Promise<number> {
+  async count(where: Record<string, unknown> = {}, ttlSeconds: number = 600): Promise<number> {
     const cacheKey = this.getCacheKey('count', { where: JSON.stringify(where) })
     
     return this.getOrSetCache(
       cacheKey,
       async () => {
-        // @ts-ignore - Generic Prisma call
+        // @ts-expect-error - Generic Prisma call
         return await this.prisma[this.modelName].count({ where })
       },
       ttlSeconds
@@ -81,8 +81,8 @@ export abstract class BaseRepository<TModel> {
    * Méthode de base pour lister avec pagination et cache
    */
   async findMany(
-    where: any = {},
-    orderBy: any = {},
+    where: Record<string, unknown> = {},
+    orderBy: Record<string, unknown> = {},
     take?: number,
     skip?: number,
     ttlSeconds: number = 300
@@ -97,7 +97,7 @@ export abstract class BaseRepository<TModel> {
     return this.getOrSetCache(
       cacheKey,
       async () => {
-        // @ts-ignore - Generic Prisma call
+        // @ts-expect-error - Generic Prisma call
         return await this.prisma[this.modelName].findMany({
           where,
           orderBy,

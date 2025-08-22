@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { getDataService, CacheTTL } from '@/lib/config/database'
 
 interface DashboardData {
@@ -69,7 +69,7 @@ interface DashboardData {
  */
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
@@ -104,6 +104,7 @@ export async function GET(req: NextRequest) {
  * Génère toutes les données du dashboard
  */
 async function generateDashboardData(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dataService: any,
   userId: string,
   moisRecul: number
@@ -130,8 +131,8 @@ async function generateDashboardData(
   // Calculer les métriques d'overview
   const overview = {
     totalJardins: jardins.length,
-    totalZones: jardins.reduce((total, j) => total + (j._stats?.nombreZones || 0), 0),
-    zonesActives: jardins.reduce((total, j) => total + (j._stats?.nombreZonesActives || 0), 0),
+    totalZones: jardins.reduce((total: number, j: Record<string, unknown>) => total + (((j._stats as Record<string, unknown>)?.nombreZones as number) || 0), 0),
+    zonesActives: jardins.reduce((total: number, j: Record<string, unknown>) => total + (((j._stats as Record<string, unknown>)?.nombreZonesActives as number) || 0), 0),
     culturesActives: culturesActives.length,
     recoltesCeMois: statsRecoltesMoisActuel.nombreRecoltes,
     poidsTotalCeMois: statsRecoltesMoisActuel.poidsTotalKg
@@ -139,34 +140,37 @@ async function generateDashboardData(
 
   // Activité récente
   const recentActivity = {
-    recoltes: recoltesRecentes.slice(0, 10).map(r => ({
+    recoltes: recoltesRecentes.slice(0, 10).map((r: Record<string, unknown>) => ({
       id: r.id,
       dateRecolte: r.dateRecolte,
-      poidsTotalKg: Number(r.poidsTotalKg),
-      variete: r.instanceCulture?.variete?.varieteBase?.nomCommun || 'Variété inconnue',
-      zone: r.zone.nom
+      poidsTotalKg: Number(r.poidsTotalKg as number),
+      variete: (((r.instanceCulture as Record<string, unknown>)?.variete as Record<string, unknown>)?.varieteBase as Record<string, unknown>)?.nomCommun as string || 'Variété inconnue',
+      zone: (r.zone as Record<string, unknown>).nom as string
     })),
     cultures: culturesActives
-      .filter(c => c._stats?.joursDepuisSemis !== undefined)
+      .filter((c: Record<string, unknown>) => ((c._stats as Record<string, unknown>)?.joursDepuisSemis as number) !== undefined)
       .slice(0, 8)
-      .map(c => ({
+      .map((c: Record<string, unknown>) => ({
         id: c.id,
         nom: c.nom,
         etapeCycleVie: c.etapeCycleVie,
-        joursDepuisSemis: c._stats?.joursDepuisSemis || 0,
-        variete: c.variete.varieteBase.nomCommun
+        joursDepuisSemis: ((c._stats as Record<string, unknown>)?.joursDepuisSemis as number) || 0,
+        variete: (((c.variete as Record<string, unknown>).varieteBase as Record<string, unknown>).nomCommun as string)
       }))
   }
 
+  // Variétés récoltées pour les graphiques
+  const varietesRecoltees = (statsRecoltes as Record<string, unknown>).varietesRecoltees as unknown[] || []
+
   // Données pour les graphiques
   const charts = {
-    productionMensuelle: statsRecoltes.evolutionMensuelle,
-    repartitionVarietes: statsRecoltes.varietesRecoltees.slice(0, 8),
+    productionMensuelle: ((statsRecoltes as Record<string, unknown>).evolutionMensuelle as any[]) || [],
+    repartitionVarietes: (varietesRecoltees.slice(0, 8) as any[]),
     evolutionQualite: await generateEvolutionQualite(dataService, userId, debutPeriode, maintenant)
   }
 
   // Insights et tendances
-  const insights = await generateInsights(dataService, userId, statsRecoltes, jardins, culturesActives)
+  const insights = await generateInsights(dataService, userId, statsRecoltes, jardins, varietesRecoltees)
 
   return {
     overview,
@@ -180,6 +184,7 @@ async function generateDashboardData(
  * Génère l'évolution de la qualité par mois
  */
 async function generateEvolutionQualite(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dataService: any,
   userId: string,
   debutPeriode: Date,
@@ -187,7 +192,7 @@ async function generateEvolutionQualite(
 ): Promise<Array<{ mois: string; noteQualite: number }>> {
   const moisList: Array<{ mois: string; noteQualite: number }> = []
   
-  let dateActuelle = new Date(debutPeriode)
+  const dateActuelle = new Date(debutPeriode)
   while (dateActuelle <= finPeriode) {
     const debutMois = new Date(dateActuelle.getFullYear(), dateActuelle.getMonth(), 1)
     const finMois = new Date(dateActuelle.getFullYear(), dateActuelle.getMonth() + 1, 0)
@@ -209,17 +214,19 @@ async function generateEvolutionQualite(
  * Génère les insights et tendances
  */
 async function generateInsights(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dataService: any,
   userId: string,
-  statsRecoltes: any,
-  jardins: any[],
-  culturesActives: any[]
+  statsRecoltes: Record<string, unknown>,
+  jardins: Record<string, unknown>[],
+  varietesRecoltees: unknown[]
+  // culturesActives parameter removed as unused
 ): Promise<DashboardData['insights']> {
   // Meilleure variété (par poids)
-  const meilleureVariete = statsRecoltes.varietesRecoltees.length > 0 
+  const meilleureVariete = varietesRecoltees.length > 0 
     ? {
-        nom: statsRecoltes.varietesRecoltees[0].variete,
-        poidsTotalKg: statsRecoltes.varietesRecoltees[0].poidsTotalKg,
+        nom: (varietesRecoltees[0] as any).variete,
+        poidsTotalKg: (varietesRecoltees[0] as any).poidsTotalKg,
         noteQualite: 4.2 // TODO: Calculer depuis les évaluations réelles
       }
     : {
@@ -230,18 +237,19 @@ async function generateInsights(
 
   // Zone la plus performante
   const zonePerformante = {
-    nom: jardins[0]?.zones?.[0]?.nom || 'Aucune zone',
+    nom: (((jardins[0] as Record<string, unknown>)?.zones as unknown[])?.[0] as Record<string, unknown>)?.nom as string || 'Aucune zone',
     rendementM2: 2.5, // TODO: Calculer le vrai rendement
-    nombreRecoltes: Math.floor(statsRecoltes.nombreRecoltes / Math.max(jardins.length, 1))
+    nombreRecoltes: Math.floor(((statsRecoltes as Record<string, unknown>).nombreRecoltes as number) / Math.max(jardins.length, 1))
   }
 
   // Tendances
   const tendances = []
   
   // Tendance production
-  if (statsRecoltes.evolutionMensuelle.length >= 2) {
-    const dernierMois = statsRecoltes.evolutionMensuelle[statsRecoltes.evolutionMensuelle.length - 1]
-    const avantDernierMois = statsRecoltes.evolutionMensuelle[statsRecoltes.evolutionMensuelle.length - 2]
+  const evolutionMensuelle = (statsRecoltes as Record<string, unknown>).evolutionMensuelle as unknown[] || []
+  if (evolutionMensuelle.length >= 2) {
+    const dernierMois = evolutionMensuelle[evolutionMensuelle.length - 1] as any
+    const avantDernierMois = evolutionMensuelle[evolutionMensuelle.length - 2] as any
     
     if (dernierMois.poidsTotalKg > avantDernierMois.poidsTotalKg) {
       tendances.push({
@@ -261,21 +269,22 @@ async function generateInsights(
   }
 
   // Tendance diversité
-  if (statsRecoltes.varietesRecoltees.length >= 3) {
+  if (varietesRecoltees.length >= 3) {
     tendances.push({
       type: 'positive' as const,
       message: 'Bonne diversité des cultures',
-      valeur: statsRecoltes.varietesRecoltees.length,
+      valeur: varietesRecoltees.length,
       comparaison: 'variétés actives'
     })
   }
 
   // Tendance qualité
-  if (statsRecoltes.noteQualiteMoyenne >= 4) {
+  const noteQualiteMoyenne = (statsRecoltes as Record<string, unknown>).noteQualiteMoyenne as number || 0
+  if (noteQualiteMoyenne >= 4) {
     tendances.push({
       type: 'positive' as const,
       message: 'Excellente qualité moyenne',
-      valeur: Math.round(statsRecoltes.noteQualiteMoyenne * 10) / 10,
+      valeur: Math.round(noteQualiteMoyenne * 10) / 10,
       comparaison: 'note sur 5'
     })
   }

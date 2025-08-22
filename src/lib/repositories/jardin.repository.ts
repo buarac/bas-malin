@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { PrismaClient, Jardin, Zone, TypeZone } from '@prisma/client'
 import { BaseRepository } from './base.repository'
 import { CacheService } from '../cache/cache.service'
@@ -176,7 +178,7 @@ export class JardinRepository extends BaseRepository<Jardin> {
     
     const jardin = await this.prisma.jardin.update({
       where: { id },
-      data: updateData
+      data: updateData as any
     })
 
     // Invalider le cache

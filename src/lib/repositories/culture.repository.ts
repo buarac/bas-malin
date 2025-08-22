@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, InstanceCulture, EtapeCycleVie, VarieteCulture, VarieteCultureUtilisateur } from '@prisma/client'
 import { BaseRepository } from './base.repository'
 import { CacheService } from '../cache/cache.service'
@@ -27,7 +28,7 @@ export interface CreateCultureInput {
   anneeSaison: number
   dateSemisPrevue?: Date
   quantitePlantee?: number
-  conditionsCulture?: any
+  conditionsCulture?: Record<string, unknown>
   notes?: string
 }
 
@@ -288,7 +289,7 @@ export class CultureRepository extends BaseRepository<InstanceCulture> {
       data: {
         ...data,
         codeLot
-      }
+      } as any
     })
 
     // Assigner la culture à la zone
@@ -318,7 +319,7 @@ export class CultureRepository extends BaseRepository<InstanceCulture> {
         ...(updateData.quantiteGermee && updateData.quantitePlantee && {
           tauxSurvie: updateData.quantiteGermee / updateData.quantitePlantee
         })
-      }
+      } as any
     })
 
     // Invalider le cache

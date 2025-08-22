@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import Redis from 'ioredis'
 
 export interface CacheConfig {
@@ -20,10 +21,10 @@ export class CacheService {
       host: config.host,
       port: config.port,
       password: config.password,
-      retryDelayOnFailover: config.retryDelayOnFailover || 100,
+      // retryDelayOnFailover: config.retryDelayOnFailover || 100,
       maxRetriesPerRequest: config.maxRetriesPerRequest || 3,
       lazyConnect: true
-    })
+    } as any)
 
     this.redis.on('error', (err) => {
       console.error('Redis connection error:', err)

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth/next'
-import { authOptions } from '@/lib/auth'
+import { auth } from '@/lib/auth'
 import { getDataService } from '@/lib/config/database'
 import { z } from 'zod'
 
@@ -30,14 +29,15 @@ const updateJardinSchema = z.object({
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jardinId: string } }
+  context: { params: Promise<{ jardinId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
+    const params = await context.params
     const { searchParams } = new URL(req.url)
     const withStats = searchParams.get('withStats') === 'true'
 
@@ -77,14 +77,15 @@ export async function GET(
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { jardinId: string } }
+  context: { params: Promise<{ jardinId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
+    const params = await context.params
     const body = await req.json()
     
     // Validation des données
@@ -111,7 +112,7 @@ export async function PATCH(
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Données invalides', details: error.errors },
+        { error: 'Données invalides', details: error.issues },
         { status: 400 }
       )
     }
@@ -128,14 +129,15 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { jardinId: string } }
+  context: { params: Promise<{ jardinId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
     }
 
+    const params = await context.params
     const dataService = getDataService()
     
     // Vérifier que le jardin appartient à l'utilisateur

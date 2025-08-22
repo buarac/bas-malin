@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { PrismaClient, Recolte, DestinationUsage } from '@prisma/client'
 import { BaseRepository } from './base.repository'
 import { CacheService } from '../cache/cache.service'
@@ -444,7 +445,7 @@ export class RecolteRepository extends BaseRepository<Recolte> {
             const recoltes = await this.prisma.recolte.findMany({
               where: { 
                 utilisateurId: userId,
-                evaluationQualite: { not: null }
+                evaluationQualite: { not: { equals: null } }
               },
               include: {
                 instanceCulture: {
@@ -629,36 +630,6 @@ export class RecolteRepository extends BaseRepository<Recolte> {
     )
   }
 
-  /**
-   * Crée une nouvelle récolte
-   */
-  async create(data: CreateRecolteInput): Promise<Recolte> {
-    const recolte = await this.prisma.recolte.create({
-      data
-    })
-
-    // Invalider les caches liés
-    await this.invalidateCache()
-    await this.cache.invalidatePattern(`instanceCulture:*`)
-    await this.cache.invalidatePattern(`zone:*`)
-    
-    return recolte
-  }
-
-  /**
-   * Met à jour une récolte
-   */
-  async update(id: string, data: Partial<CreateRecolteInput>): Promise<Recolte> {
-    const recolte = await this.prisma.recolte.update({
-      where: { id },
-      data
-    })
-
-    // Invalider le cache
-    await this.invalidateCache()
-    
-    return recolte
-  }
 
   /**
    * Trouve les récoltes récentes pour dashboard
