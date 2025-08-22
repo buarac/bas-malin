@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/buarac/bas-malin/compare/v1.2.1...v1.3.0) (2025-08-22)
+
+
+### Features
+
+* F2.1 - Gestion des Cultures & Variétés ([2d93a63](https://github.com/buarac/bas-malin/commit/2d93a63e59a476ce576584cb25e4f94d1a9a07d9))
+
 ## [1.2.1](https://github.com/buarac/bas-malin/compare/v1.2.0...v1.2.1) (2025-08-22)
 
 
