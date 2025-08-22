@@ -176,7 +176,7 @@ export async function exempleOptimisationTaches() {
     // Vérifier les prévisions pour les 7 prochains jours
     console.log('\n📅 Prévisions optimales sur 7 jours:')
     
-    meteo.forecast7days.forEach((day, index) => {
+    meteo.forecast7days.forEach((day) => {
       const semisOK = weatherService.isOptimalConditionForTask(day, 'SEMIS')
       if (semisOK.optimal) {
         console.log(`   ✅ ${day.date}: Optimal pour semis`)

@@ -13,12 +13,9 @@ import { PrismaClient, VarieteCulture } from '@prisma/client'
 
 interface Zone {
   id: string
-  geometrie?: {
-    surfaceM2?: number
-  }
+  geometrie?: unknown
   jardin: {
-    latitude?: number
-    longitude?: number
+    localisation: unknown
   }
   instancesCulture: Array<{
     variete: {
@@ -28,12 +25,6 @@ interface Zone {
   }>
 }
 
-interface Culture {
-  varieteCulture: VarieteCulture
-  recoltes: Array<{
-    quantite?: number
-  }>
-}
 
 export interface LunarPhase {
   phase: 'new_moon' | 'first_quarter' | 'full_moon' | 'last_quarter'
@@ -140,7 +131,7 @@ export class CalendarService {
       activity, 
       variety, 
       targetPeriod,
-      zone.jardin.latitude || 45.0
+      ((zone.jardin.localisation as Record<string, unknown>)?.latitude as number) || 45.0
     )
 
     const rotationFactor = preferences.considerRotation
@@ -360,7 +351,7 @@ export class CalendarService {
    * Détermine les fenêtres saisonnières pour une variété
    */
   private getSeasonalWindows(variety: VarieteCulture, latitude: number): SeasonalWindow[] {
-    const calendrierDefaut = (variety.calendrierDefaut as any) || {}
+    const calendrierDefaut = (variety.calendrierDefaut as Record<string, unknown>) || {}
     const currentYear = new Date().getFullYear()
 
     // Ajustement selon la latitude (plus on monte, plus on décale)
@@ -370,8 +361,9 @@ export class CalendarService {
 
     // Fenêtre de semis principal
     if (calendrierDefaut.semisPrincipal) {
-      const startMonth = calendrierDefaut.semisPrincipal.debut || 3 // Mars par défaut
-      const endMonth = calendrierDefaut.semisPrincipal.fin || 5 // Mai par défaut
+      const semisPrincipal = calendrierDefaut.semisPrincipal as Record<string, unknown>
+      const startMonth = (semisPrincipal.debut as number) || 3 // Mars par défaut
+      const endMonth = (semisPrincipal.fin as number) || 5 // Mai par défaut
       
       windows.push({
         name: 'semis_principal',
@@ -504,7 +496,7 @@ export class CalendarService {
     // Calculer la performance moyenne
     const performances = historicalData.map(culture => {
       const recoltes = culture.recoltes
-      const rendement = recoltes.reduce((sum, r) => sum + (r.quantite || 0), 0)
+      const rendement = recoltes.reduce((sum, r) => sum + Number(r.poidsTotalKg || 0), 0)
       return rendement > 0 ? Math.min(1.0, rendement / 10) : 0.3 // Normaliser à 10kg max
     })
 
@@ -630,7 +622,7 @@ export class CalendarService {
       const variety = await this.prisma.varieteCulture.findFirst({
         where: { nomCommun: culture }
       })
-      if (variety) {
+      if (variety && variety.famille) {
         const family = variety.famille
         if (!familyGroups[family]) familyGroups[family] = []
         familyGroups[family].push(culture)

@@ -13,12 +13,9 @@ import { addDays, addWeeks, format, isBefore } from 'date-fns'
 
 interface Zone {
   id: string
-  geometrie?: {
-    surfaceM2?: number
-  }
+  geometrie?: unknown
   jardin: {
-    latitude?: number
-    longitude?: number
+    localisation: unknown
   }
 }
 
@@ -154,9 +151,10 @@ export class SmartPlanningService {
       const requirements = this.extractCultureRequirements(variety)
 
       // 4. Obtenir les données météorologiques
+      const localisation = zone.jardin.localisation as Record<string, unknown>
       const weatherData = await this.getWeatherDataForZone(
-        zone.jardin.latitude || 45.0, 
-        zone.jardin.longitude || 5.0,
+        (localisation?.latitude as number) || 45.0, 
+        (localisation?.longitude as number) || 5.0,
         targetYear
       )
 
@@ -238,24 +236,24 @@ export class SmartPlanningService {
    * Extrait les exigences culturales depuis les données de la variété
    */
   private extractCultureRequirements(variety: VarieteCulture): CultureRequirements {
-    const infosCulture = (variety.infosCulture as any) || {}
-    const calendrierDefaut = (variety.calendrierDefaut as any) || {}
+    const infosCulture = (variety.infosCulture as Record<string, unknown>) || {}
+    const calendrierDefaut = (variety.calendrierDefaut as Record<string, unknown>) || {}
 
     return {
-      temperatureMin: infosCulture.temperatureMin || 8,
-      temperatureMax: infosCulture.temperatureMax || 35,
-      temperatureOptimal: infosCulture.temperatureOptimal || 20,
+      temperatureMin: (infosCulture.temperatureMin as number) || 8,
+      temperatureMax: (infosCulture.temperatureMax as number) || 35,
+      temperatureOptimal: (infosCulture.temperatureOptimal as number) || 20,
       germination: {
-        durationDays: infosCulture.dureeGermination || 7,
-        temperatureMin: infosCulture.temperatureGermination || 12
+        durationDays: (infosCulture.dureeGermination as number) || 7,
+        temperatureMin: (infosCulture.temperatureGermination as number) || 12
       },
       growth: {
-        durationDays: calendrierDefaut.dureeCroissance || 90,
-        waterNeeds: infosCulture.besoinsEau || 'medium'
+        durationDays: (calendrierDefaut.dureeCroissance as number) || 90,
+        waterNeeds: (infosCulture.besoinsEau as 'low' | 'medium' | 'high') || 'medium'
       },
       harvest: {
-        durationDays: calendrierDefaut.dureeRecolte || 14,
-        indicators: infosCulture.indicateursRecolte || ['size', 'color']
+        durationDays: (calendrierDefaut.dureeRecolte as number) || 14,
+        indicators: (infosCulture.indicateursRecolte as string[]) || ['size', 'color']
       }
     }
   }
@@ -433,8 +431,8 @@ export class SmartPlanningService {
    * Détermine si la variété nécessite un repiquage
    */
   private needsTransplanting(variety: VarieteCulture): boolean {
-    const infosCulture = (variety.infosCulture as any) || {}
-    return infosCulture.necessiteRepiquage === true || 
+    const infosCulture = (variety.infosCulture as Record<string, unknown>) || {}
+    return (infosCulture.necessiteRepiquage as boolean) === true || 
            ['TOMATE', 'AUBERGINE', 'POIVRON', 'CONCOMBRE'].includes(variety.categorie)
   }
 
@@ -602,10 +600,10 @@ export class SmartPlanningService {
    * Estime le rendement attendu
    */
   private estimateYield(variety: VarieteCulture, zone: Zone, optimizationScore: number): number {
-    const infosCulture = (variety.infosCulture as any) || {}
-    const baseYield = infosCulture.rendementMoyenKgM2 || 5.0
-    const geometrie = (zone.geometrie as any) || {}
-    const zoneArea = geometrie.surfaceM2 || 1.0
+    const infosCulture = (variety.infosCulture as Record<string, unknown>) || {}
+    const baseYield = (infosCulture.rendementMoyenKgM2 as number) || 5.0
+    const geometrie = (zone.geometrie as Record<string, unknown>) || {}
+    const zoneArea = (geometrie.surfaceM2 as number) || 1.0
     
     return baseYield * zoneArea * optimizationScore
   }
