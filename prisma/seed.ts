@@ -1,6 +1,12 @@
 import { PrismaClient } from '@prisma/client'
 import { varietesBase, typesIntervention } from './seed-data/varietes-culture'
 import { varietesF21Data } from './seed-data/varietes-f21'
+import { 
+  planPlantationSeedData, 
+  plannedCultureSeedData, 
+  tacheQuotidienneSeedData, 
+  typeInterventionF22Data 
+} from './seed-data/planning-f22'
 
 const prisma = new PrismaClient()
 
@@ -73,13 +79,73 @@ async function main() {
       console.log('⏭️  Types d\'intervention déjà présents, passage...')
     }
 
-    // 4. Statistiques finales
+    // 4. Seeder les données de planification F2.2
+    const existingPlans = await prisma.planPlantation.count()
+    
+    if (existingPlans === 0) {
+      console.log('📅 Création des données de planification F2.2...')
+      
+      // Créer plans de plantation
+      for (const plan of planPlantationSeedData) {
+        try {
+          await prisma.planPlantation.create({
+            data: {
+              id: plan.id,
+              utilisateurId: 'test-user-sacha', // Assume this user exists from previous seeds
+              jardinId: 'jardin-principal-sacha', // Assume this garden exists
+              nom: plan.nom,
+              description: plan.description,
+              anneeCible: plan.anneeCible,
+              strategiePlanification: plan.strategiePlanification,
+              cycleRotationAnnees: plan.cycleRotationAnnees,
+              contraintes: plan.contraintes as any,
+              scoreOptimisation: plan.scoreOptimisation,
+              rendementTotalAttendu: plan.rendementTotalAttendu,
+              coutEstime: plan.coutEstime,
+              heuresTravailEstimees: plan.heuresTravailEstimees,
+              statut: plan.statut
+            }
+          })
+        } catch (error) {
+          console.log(`⚠️  Plan ${plan.nom} ignoré (dépendances manquantes):`, error)
+        }
+      }
+      
+      // Créer types d'intervention F2.2
+      for (const type of typeInterventionF22Data) {
+        try {
+          await prisma.typeIntervention.create({
+            data: {
+              id: type.id,
+              nom: type.nom,
+              categorie: type.categorie,
+              dureeDefautMinutes: type.dureeDefautMinutes,
+              necessiteVerifMeteo: type.necessiteVerifMeteo,
+              heureOptimaleJournee: type.heureOptimaleJournee as any,
+              modeleSaisie: type.modeleSaisie as any,
+              frequenceSuggeree: type.frequenceSuggeree as any
+            }
+          })
+        } catch (error) {
+          console.log(`⚠️  Type intervention ${type.nom} ignoré:`, error)
+        }
+      }
+      
+      console.log(`✅ Données planification F2.2 créées`)
+    } else {
+      console.log('⏭️  Plans de plantation déjà présents, passage...')
+    }
+
+    // 5. Statistiques finales
     const stats = {
       totalVarietes: await prisma.varieteCulture.count(),
       totalTypesIntervention: await prisma.typeIntervention.count(),
       totalUtilisateurs: await prisma.user.count(),
       totalJardins: await prisma.jardin.count(),
-      totalZones: await prisma.zone.count()
+      totalZones: await prisma.zone.count(),
+      totalPlansPlantation: await prisma.planPlantation.count(),
+      totalPlannedCultures: await prisma.plannedCulture.count(),
+      totalTachesQuotidiennes: await prisma.tacheQuotidienne.count()
     }
 
     console.log('📈 Statistiques finales:')
@@ -88,6 +154,9 @@ async function main() {
     console.log(`  - Utilisateurs: ${stats.totalUtilisateurs}`)
     console.log(`  - Jardins: ${stats.totalJardins}`)
     console.log(`  - Zones: ${stats.totalZones}`)
+    console.log(`  - Plans de plantation: ${stats.totalPlansPlantation}`)
+    console.log(`  - Cultures planifiées: ${stats.totalPlannedCultures}`)
+    console.log(`  - Tâches quotidiennes: ${stats.totalTachesQuotidiennes}`)
 
     console.log('🎉 Seeding terminé avec succès!')
 

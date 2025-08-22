@@ -79,6 +79,7 @@ model User {
   varietesUtilisateur VarieteCultureUtilisateur[]
   plansPlantation   PlanPlantation[]
   resumesProduction ResumeProduction[]
+  tachesQuotidiennes TacheQuotidienne[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -239,6 +240,8 @@ model Zone {
   interventions       Intervention[]
   recoltes           Recolte[]
   appareilsIot       AppareilIoT[]
+  plannedCultures     PlannedCulture[]
+  tachesQuotidiennes  TacheQuotidienne[]
   
   @@map("zones")
 }
@@ -315,6 +318,7 @@ model VarieteCulture {
   // Relations
   creePar                     User? @relation(fields: [creeParId], references: [id])
   varietesUtilisateur         VarieteCultureUtilisateur[]
+  plannedCultures             PlannedCulture[]
   
   // Index pour recherche performante
   @@index([famille, categorie])
@@ -481,8 +485,90 @@ model PlanPlantation {
   // Relations
   utilisateur User @relation(fields: [utilisateurId], references: [id])
   jardin      Jardin @relation(fields: [jardinId], references: [id])
+  culturesPlannifiees PlannedCulture[]
   
   @@map("plans_plantation")
+}
+
+// F2.2 - Culture planifiée dans un plan avec intelligence météo
+model PlannedCulture {
+  id                String @id @default(cuid())
+  planId            String @map("plan_id")
+  varietyId         String @map("variety_id")
+  zoneId            String @map("zone_id")
+  
+  // Dates calculées intelligentes (F2.2)
+  dateSemisPrevue   DateTime @map("date_semis_prevue")
+  fenetreSemis      Json @map("fenetre_semis") // {debut, fin, scoreConfiance, reasoning}
+  dateRepiquagePrevue DateTime? @map("date_repiquage_prevue")
+  fenetreRecolte    Json @map("fenetre_recolte") // {debut, fin, dureeEstimee, rendementAttendu}
+  
+  // Interventions programmées automatiques (F2.2)
+  interventionsProgrammees Json @map("interventions_programmees") // [{type, date, description, criticite, dependsOnWeather}]
+  
+  // Optimisation et intelligence
+  scoreOptimisationZone    Decimal? @db.Decimal(3,2) @map("score_optimisation_zone")
+  compatibiliteVoisinage   Json? @map("compatibilite_voisinage") // Associations/rotations
+  risquesIdentifies        Json? @map("risques_identifies") // [{type, date, severite, recommandation}]
+  recommandations          Json? @map("recommandations") // Conseils IA personnalisés
+  
+  // Ajustements météorologiques (F4.1 intégration)
+  ajustementsMeterologiques Json? @map("ajustements_meteorologiques") // [{originalDate, adjustedDate, reason, confidence}]
+  dernierAjustementA        DateTime? @map("dernier_ajustement_a")
+  
+  // Suivi de réalisation
+  dateSemisReelle     DateTime? @map("date_semis_reelle")
+  dateRepiquageReelle DateTime? @map("date_repiquage_reelle")
+  estatRealise        Boolean @default(false) @map("est_realise")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  plan     PlanPlantation @relation(fields: [planId], references: [id])
+  variete  VarieteCulture @relation(fields: [varietyId], references: [id])
+  zone     Zone @relation(fields: [zoneId], references: [id])
+  tachesQuotidiennes TacheQuotidienne[]
+  
+  @@map("planned_cultures")
+}
+
+// F2.2 - Tâche quotidienne générée par planification
+model TacheQuotidienne {
+  id                    String @id @default(cuid())
+  utilisateurId         String @map("utilisateur_id")
+  plannedCultureId      String? @map("planned_culture_id")
+  zoneId                String @map("zone_id")
+  
+  // Planification
+  datePrevue            DateTime @map("date_prevue")
+  type                  CategorieIntervention
+  description           String
+  dureeEstimeeMinutes   Int? @map("duree_estimee_minutes")
+  
+  // Priorité et conditions
+  priorite              PrioriteTache @default(NORMALE)
+  dependMeteo           Boolean @default(false) @map("depend_meteo")
+  conditionsRequises    Json? @map("conditions_requises") // {temperatureMin, temperatureMax, pasPluie, ventMax}
+  
+  // Géolocalisation (F2.2 mobile)
+  coordonneesZone       Json? @map("coordonnees_zone") // {latitude, longitude} pour géofencing
+  notificationEnvoyee   Boolean @default(false) @map("notification_envoyee")
+  
+  // Statut
+  estatRealise          Boolean @default(false) @map("est_realise")
+  dateRealisationReelle DateTime? @map("date_realisation_reelle")
+  notesUtilisateur      String? @map("notes_utilisateur")
+  
+  creeA       DateTime @default(now()) @map("cree_a")
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur     User @relation(fields: [utilisateurId], references: [id])
+  plannedCulture  PlannedCulture? @relation(fields: [plannedCultureId], references: [id])
+  zone            Zone @relation(fields: [zoneId], references: [id])
+  
+  @@map("taches_quotidiennes")
 }
 
 // ===== DOMAINE INTERVENTIONS & ACTIVITÉS =====
@@ -684,6 +770,13 @@ enum CategorieIntervention {
   RECOLTE
   MAINTENANCE
   OBSERVATION
+}
+
+enum PrioriteTache {
+  FAIBLE
+  NORMALE
+  ELEVEE
+  URGENTE
 }
 
 enum DestinationUsage {
