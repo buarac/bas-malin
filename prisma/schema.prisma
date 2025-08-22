@@ -286,32 +286,39 @@ enum AccesEau {
 // Base de connaissances des variétés
 model VarieteCulture {
   id              String @id @default(cuid())
-  nomScientifique String? @map("nom_scientifique")
-  nomCommun       String @map("nom_commun")
-  famille         String? // Solanaceae, Brassicaceae
+  nomScientifique String? @map("nom_scientifique") @db.VarChar(200)
+  nomCommun       String @map("nom_commun") @db.VarChar(200)
+  famille         String? @db.VarChar(100) // Solanaceae, Brassicaceae
   categorie       CategorieCulture
   
-  // Caractéristiques de culture
-  infosCulture    Json @map("infos_culture") // {profondeurPlantationCm, espacementCm, joursGermination, joursRecolte, plantesCompagnes[], plantesIncompatibles[], temperaturesOptimales, besoinsEau, exigencesSoleil, niveauDifficulte}
+  // Caractéristiques de culture (JSON structuré)
+  infosCulture    Json @map("infos_culture") @db.JsonB // Structure détaillée InfosCulture
   
   // Calendrier par défaut (adaptable par région)
-  calendrierDefaut Json @map("calendrier_defaut") // {moisSemis[], moisPlantation[], moisRecolte[]}
+  calendrierDefaut Json @map("calendrier_defaut") @db.JsonB // {moisSemis[], moisPlantation[], moisRecolte[]}
   
-  // Données enrichies par l'IA
-  insightsIA      Json? @map("insights_ia") // {tauxReussite, conditionsOptimales, problemesCourants, derniereMiseAJour}
+  // Données enrichies par l'IA et feedback utilisateurs
+  insightsIA      Json? @map("insights_ia") @db.JsonB // {tauxReussite, conditionsOptimales, problemesCourants}
   
-  // Métadonnées
+  // Métadonnées source
   sourceDonnees   SourceDonnees @default(MANUEL) @map("source_donnees")
   estPersonnalise Boolean @default(false) @map("est_personnalise")
   creeParId       String? @map("cree_par_id")
   
-  creeA       DateTime @default(now()) @map("cree_a")
-  misAJourA   DateTime @updatedAt @map("mis_a_jour_a")
+  // Images et documentation
+  photos          Json? @db.JsonB // [{url, legende, type}]
+  liens           Json? @db.JsonB // [{url, titre, type}]
+  
+  creeA       DateTime @default(now()) @map("cree_a") @db.Timestamptz
+  misAJourA   DateTime @updatedAt @map("mis_a_jour_a") @db.Timestamptz
   
   // Relations
   creePar                     User? @relation(fields: [creeParId], references: [id])
   varietesUtilisateur         VarieteCultureUtilisateur[]
   
+  // Index pour recherche performante
+  @@index([famille, categorie])
+  @@index([nomCommun]) // Recherche textuelle
   @@map("varietes_culture")
 }
 
@@ -322,25 +329,36 @@ model VarieteCultureUtilisateur {
   varieteBaseId           String @map("variete_base_id")
   
   // Personnalisation utilisateur
-  nomPersonnalise         String? @map("nom_personnalise") // "Tomates cerises du garage"
-  notesPersonnelles       String? @map("notes_personnelles")
-  infosCulturePersonnalisees Json? @map("infos_culture_personnalisees") // Override des infos de base
+  nomPersonnalise         String? @map("nom_personnalise") @db.VarChar(200) // "Tomates cerises du garage"
+  notesPersonnelles       String? @map("notes_personnelles") @db.Text
+  infosCulturePersonnalisees Json? @map("infos_culture_personnalisees") @db.JsonB // Override des infos de base
   
   // Performance tracking personnalisé
-  performancePersonnelle  Json? @map("performance_personnelle") // {tauxReussite, rendementMoyenKg, meilleureDateRecolte, notes}
+  performancePersonnelle  Json @map("performance_personnelle") @db.JsonB // Structure détaillée PerformancePersonnelle
   
   // Photos personnalisées
-  photos                  Json? // [{url, legende, priseA}]
+  photos                  Json? @db.JsonB // [{url, legende, priseA, stade}]
   
+  // État et préférences
   estFavorite            Boolean @default(false) @map("est_favorite")
-  creeA                  DateTime @default(now()) @map("cree_a")
-  misAJourA              DateTime @updatedAt @map("mis_a_jour_a")
+  estRecommandee         Boolean @default(false) @map("est_recommandee") // Recommandé par IA
+  dateTest               DateTime? @map("date_test") // Première fois testée
+  
+  // Évaluation utilisateur
+  noteGlobale            Int? @map("note_globale") @db.SmallInt // 1-5
+  commentaireExperience  String? @map("commentaire_experience") @db.Text
+  
+  creeA                  DateTime @default(now()) @map("cree_a") @db.Timestamptz
+  misAJourA              DateTime @updatedAt @map("mis_a_jour_a") @db.Timestamptz
   
   // Relations
-  utilisateur    User @relation(fields: [utilisateurId], references: [id])
+  utilisateur    User @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
   varieteBase    VarieteCulture @relation(fields: [varieteBaseId], references: [id])
   instancesCulture InstanceCulture[]
   
+  // Contrainte unicité par utilisateur
+  @@unique([utilisateurId, varieteBaseId])
+  @@index([utilisateurId, estFavorite])
   @@map("varietes_culture_utilisateur")
 }
 

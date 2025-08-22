@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client'
 import { varietesBase, typesIntervention } from './seed-data/varietes-culture'
+import { varietesF21Data } from './seed-data/varietes-f21'
 
 const prisma = new PrismaClient()
 
@@ -13,28 +14,39 @@ async function main() {
 
     console.log(`📊 Données existantes: ${existingVarietes} variétés, ${existingTypes} types d'intervention`)
 
-    // 2. Seeder les variétés de culture si nécessaire
-    if (existingVarietes === 0) {
-      console.log('🌿 Création des variétés de culture de base...')
+    // 2. Seeder les variétés de culture F2.1 si nécessaire
+    if (existingVarietes < 12) { // Nouveau seuil pour F2.1
+      console.log('🌿 Mise à jour avec les variétés F2.1...')
       
-      for (const variete of varietesBase) {
+      // Nettoyer les anciennes données si elles existent
+      if (existingVarietes > 0) {
+        await prisma.varieteCulture.deleteMany({
+          where: { sourceDonnees: 'MANUEL' }
+        })
+        console.log('🧹 Anciennes variétés supprimées')
+      }
+      
+      for (const variete of varietesF21Data) {
         await prisma.varieteCulture.create({
           data: {
             nomScientifique: variete.nomScientifique,
             nomCommun: variete.nomCommun,
             famille: variete.famille,
             categorie: variete.categorie as any,
-            infosCulture: variete.infosCulture,
-            calendrierDefaut: variete.calendrierDefaut,
-            sourceDonnees: 'MANUEL',
-            estPersonnalise: false
+            infosCulture: variete.infosCulture as any,
+            calendrierDefaut: variete.calendrierDefaut as any,
+            sourceDonnees: variete.sourceDonnees as any,
+            estPersonnalise: variete.estPersonnalise,
+            photos: undefined,
+            liens: undefined,
+            insightsIA: undefined
           }
         })
       }
       
-      console.log(`✅ ${varietesBase.length} variétés de culture créées`)
+      console.log(`✅ ${varietesF21Data.length} variétés F2.1 créées avec données techniques complètes`)
     } else {
-      console.log('⏭️  Variétés de culture déjà présentes, passage...')
+      console.log('⏭️  Variétés F2.1 déjà présentes, passage...')
     }
 
     // 3. Seeder les types d'intervention si nécessaire
