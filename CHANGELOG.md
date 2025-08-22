@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/buarac/bas-malin/compare/v1.4.0...v1.4.1) (2025-08-22)
+
+
+### Bug Fixes
+
+* correction des erreurs typescript ([a9050fc](https://github.com/buarac/bas-malin/commit/a9050fcbf9367f18abc42cf7620493147ffd34f1))
+
 # [1.4.0](https://github.com/buarac/bas-malin/compare/v1.3.0...v1.4.0) (2025-08-22)
 
 
