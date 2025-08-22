@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/buarac/bas-malin/compare/v1.3.0...v1.4.0) (2025-08-22)
+
+
+### Features
+
+* F2.2 - Planificateur de Semis & Calendrier Cultural ([eddf363](https://github.com/buarac/bas-malin/commit/eddf3636a422eba4d096fd989ba09b2f488e7699))
+
 # [1.3.0](https://github.com/buarac/bas-malin/compare/v1.2.1...v1.3.0) (2025-08-22)
 
 
