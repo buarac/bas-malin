@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/buarac/bas-malin/compare/v1.2.0...v1.2.1) (2025-08-22)
+
+
+### Bug Fixes
+
+* correction des erreurs typescript ([6c0816a](https://github.com/buarac/bas-malin/commit/6c0816a967e72ff411099c0a45776d4f385ed7f2))
+
 # [1.2.0](https://github.com/buarac/bas-malin/compare/v1.1.0...v1.2.0) (2025-08-21)
 
 
