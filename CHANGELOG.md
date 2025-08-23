@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/buarac/bas-malin/compare/v1.4.1...v1.5.0) (2025-08-23)
+
+
+### Features
+
+* 3.1 - Collecte & Consolidation Automatique ([2ba106b](https://github.com/buarac/bas-malin/commit/2ba106bd7cdcfe4c1fd5f679808bc908ee825697))
+
 ## [1.4.1](https://github.com/buarac/bas-malin/compare/v1.4.0...v1.4.1) (2025-08-22)
 
 
