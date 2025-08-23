@@ -80,6 +80,10 @@ model User {
   plansPlantation   PlanPlantation[]
   resumesProduction ResumeProduction[]
   tachesQuotidiennes TacheQuotidienne[]
+  
+  // F3.1 Relations
+  sourcesCollecte   SourceCollecte[]
+  configurationsEnrichissement ConfigurationEnrichissement[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -207,6 +211,9 @@ model Jardin {
   alertesMeteo    AlerteMeteo[]
   appareilsIot    AppareilIoT[]
   plansPlantation PlanPlantation[]
+  
+  // F3.1 Relations
+  sourcesCollecte SourceCollecte[]
   
   @@map("jardins")
 }
@@ -1012,4 +1019,220 @@ enum StatutAppareilIoT {
   MAINTENANCE
   ERREUR
   HORS_LIGNE
+}
+
+// ===== F3.1 - SYSTÈME DE COLLECTE & CONSOLIDATION AUTOMATIQUE =====
+
+// Source de collecte configurée
+model SourceCollecte {
+  id                      String @id @default(cuid())
+  jardinId                String @map("jardin_id")
+  utilisateurId           String @map("utilisateur_id")
+  
+  // Configuration
+  nom                     String
+  type                    TypeSourceCollecte
+  configuration           Json // Configuration spécifique au type (endpoints, credentials, chemins, etc.)
+  frequenceMs             Int @map("frequence_ms") // Fréquence de collecte en millisecondes
+  
+  // État
+  enabled                 Boolean @default(true)
+  derniereCollecteA       DateTime? @map("derniere_collecte_a")
+  prochaineCollectePrevue DateTime? @map("prochaine_collecte_prevue")
+  statut                  StatutSourceCollecte @default(ACTIVE)
+  
+  // Métriques de performance
+  totalCollectes          Int @default(0) @map("total_collectes")
+  collectesReussies       Int @default(0) @map("collectes_reussies")
+  tauxSucces              Decimal? @db.Decimal(5,2) @map("taux_succes") // Pourcentage de succès
+  tempsMoyenMs            Int? @map("temps_moyen_ms")
+  
+  // Gestion des erreurs
+  derniereErreur          String? @map("derniere_erreur")
+  erreurCount             Int @default(0) @map("erreur_count")
+  
+  creeA                   DateTime @default(now()) @map("cree_a")
+  misAJourA               DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  jardin                  Jardin @relation(fields: [jardinId], references: [id])
+  utilisateur             User @relation(fields: [utilisateurId], references: [id])
+  donneesCollectees       DonneesCollectees[]
+  
+  @@map("sources_collecte")
+}
+
+// Données collectées avec enrichissements
+model DonneesCollectees {
+  id                      String @id @default(cuid())
+  sourceId                String @map("source_id")
+  
+  // Timing
+  timestamp               DateTime // Horodatage des données originales
+  collecteA               DateTime @default(now()) @map("collecte_a") // Moment de la collecte
+  
+  // Données
+  donneesRaw              Json @map("donnees_raw") // Données brutes collectées
+  tailleDonnees           Int @map("taille_donnees") // Taille en octets
+  checksumDonnees         String? @map("checksum_donnees") // Pour détecter corruption
+  
+  // Métadonnées de collecte
+  dureeCollecteMs         Int @map("duree_collecte_ms")
+  scoreQualite            Decimal @db.Decimal(3,2) @map("score_qualite") // 0.0 à 1.0
+  conflitsDetectes        Json? @map("conflits_detectes") // Liste des conflits trouvés
+  
+  // État d'enrichissement
+  enrichissementStatut    StatutEnrichissement @default(PENDING) @map("enrichissement_statut")
+  enrichissementDemarreA  DateTime? @map("enrichissement_demarre_a")
+  enrichissementTermineA  DateTime? @map("enrichissement_termine_a")
+  
+  creeA                   DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  source                  SourceCollecte @relation(fields: [sourceId], references: [id])
+  enrichissements         EnrichissementDonnees[]
+  synchronisationsLog     SynchronisationLog[]
+  
+  @@index([sourceId, timestamp])
+  @@index([collecteA])
+  @@map("donnees_collectees")
+}
+
+// Enrichissements appliqués aux données
+model EnrichissementDonnees {
+  id                      String @id @default(cuid())
+  donneesCollecteesId     String @map("donnees_collectees_id")
+  
+  // Configuration enrichissement
+  typeEnrichissement      TypeEnrichissement @map("type_enrichissement")
+  processeurVersion       String @map("processeur_version") // Version du processeur utilisé
+  
+  // Résultat
+  resultat                Json // Données enrichies
+  scoreConfiance          Decimal @db.Decimal(3,2) @map("score_confiance") // 0.0 à 1.0
+  
+  // Performance
+  dureeTraitementMs       Int @map("duree_traitement_ms")
+  coutTraitement          Decimal? @db.Decimal(8,4) @map("cout_traitement") // Coût en euros si API payante
+  
+  // Métadonnées
+  metadonnees             Json? // Informations additionnelles sur le traitement
+  
+  creeA                   DateTime @default(now()) @map("cree_a")
+  
+  // Relations  
+  donneesCollectees       DonneesCollectees @relation(fields: [donneesCollecteesId], references: [id])
+  
+  @@map("enrichissements_donnees")
+}
+
+// Configuration du pipeline d'enrichissement
+model ConfigurationEnrichissement {
+  id                      String @id @default(cuid())
+  utilisateurId           String @map("utilisateur_id")
+  
+  // Configuration
+  nom                     String
+  description             String?
+  typeSource              TypeSourceCollecte @map("type_source") // À quels types de sources cette config s'applique
+  
+  // Pipeline
+  processeurs             Json // Liste ordonnée des processeurs à appliquer
+  conditionsActivation    Json? @map("conditions_activation") // Conditions pour activer ce pipeline
+  
+  // État
+  enabled                 Boolean @default(true)
+  priorite                Int @default(10) // Plus le chiffre est bas, plus prioritaire
+  
+  // Métriques
+  utilisationsCount       Int @default(0) @map("utilisations_count")
+  tempsExecutionMoyenMs   Int? @map("temps_execution_moyen_ms")
+  
+  creeA                   DateTime @default(now()) @map("cree_a")
+  misAJourA               DateTime @updatedAt @map("mis_a_jour_a")
+  
+  // Relations
+  utilisateur             User @relation(fields: [utilisateurId], references: [id])
+  
+  @@map("configurations_enrichissement")
+}
+
+// Log des synchronisations multi-device
+model SynchronisationLog {
+  id                      String @id @default(cuid())
+  
+  // Source
+  donneesCollecteesId     String? @map("donnees_collectees_id") // Peut être null pour sync générales
+  deviceSource            String @map("device_source") // Appareil qui a initié la sync
+  
+  // Cibles
+  devicesTarget           String[] @map("devices_target") // Appareils ciblés
+  devicesReussis          String[] @map("devices_reussis") // Appareils ayant reçu avec succès
+  devicesEchec            String[] @map("devices_echec") // Appareils en échec
+  
+  // Timing
+  demarreA                DateTime @map("demarre_a")
+  termineA                DateTime? @map("termine_a")
+  dureeMs                 Int? @map("duree_ms")
+  
+  // Résultats
+  statut                  StatutSynchronisation
+  tailleDonnees           Int @map("taille_donnees") // Taille des données synchronisées
+  conflitsResolus         Json? @map("conflits_resolus") // Liste des conflits résolus
+  erreurs                 Json? // Détails des erreurs rencontrées
+  
+  creeA                   DateTime @default(now()) @map("cree_a")
+  
+  // Relations
+  donneesCollectees       DonneesCollectees? @relation(fields: [donneesCollecteesId], references: [id])
+  
+  @@index([demarreA])
+  @@map("synchronisations_log")
+}
+
+// F3.1 Relations - à ajouter aux modèles existants User et Jardin
+
+// Enums pour F3.1
+enum TypeSourceCollecte {
+  IOT_HOME_ASSISTANT     // Collecte depuis Home Assistant
+  WEATHER_API            // API météo
+  PHOTO_LOCAL            // Photos locales avec métadonnées
+  PHOTO_UPLOAD           // Photos uploadées
+  MANUAL_INPUT           // Saisies manuelles
+  SENSOR_DIRECT          // Capteurs directs (ESP32, Arduino)
+  EXTERNAL_API           // APIs externes personnalisées
+}
+
+enum StatutSourceCollecte {
+  ACTIVE                 // Collecte active
+  PAUSED                 // En pause
+  ERROR                  // En erreur
+  MAINTENANCE            // En maintenance
+  DISABLED               // Désactivée
+}
+
+enum TypeEnrichissement {
+  AI_IMAGE_ANALYSIS      // Analyse IA d'images (plantes, maladies)
+  AI_PATTERN_DETECTION   // Détection de patterns dans données IoT
+  GEOLOCATION           // Enrichissement géographique
+  TEMPORAL_CORRELATION  // Corrélation temporelle
+  CALCULATION           // Calculs automatiques (rendement, croissance)
+  CONTEXTUAL            // Enrichissement contextuel
+  WEATHER_CORRELATION   // Corrélation avec données météo
+}
+
+enum StatutEnrichissement {
+  PENDING               // En attente
+  PROCESSING            // En cours de traitement
+  COMPLETED             // Terminé avec succès
+  FAILED                // Échec
+  SKIPPED               // Ignoré (conditions non remplies)
+}
+
+enum StatutSynchronisation {
+  IN_PROGRESS           // En cours
+  SUCCESS               // Succès complet
+  PARTIAL_SUCCESS       // Succès partiel
+  FAILED                // Échec complet
+  TIMEOUT               // Timeout
 }
