@@ -44,7 +44,7 @@ export interface SensorReading {
   }
 }
 
-export interface IoTCollectionResult {
+export interface IoTCollectionResult extends Record<string, unknown> {
   type: 'iot'
   gardenId: string
   readings: SensorReading[]
@@ -147,25 +147,27 @@ export class IoTCollector extends BaseCollector {
       for (const entity of entities) {
         if (this.isRelevantSensor(entity, config.deviceTypes)) {
           try {
-            const state = await this.homeAssistantClient.getEntityState(entity.entity_id)
+            const entityObj = entity as Record<string, unknown>
+            const entityId = entityObj.entity_id as string
+            const state = await this.homeAssistantClient.getEntityState(entityId)
             
             if (this.isValidReading(state, config)) {
               const reading: SensorReading = {
-                deviceId: entity.entity_id,
-                entityId: entity.entity_id,
-                sensorType: this.extractSensorType(entity.entity_id),
-                value: parseFloat(state.state),
-                unit: state.attributes?.unit_of_measurement || '',
-                timestamp: new Date(state.last_updated),
+                deviceId: entityId,
+                entityId: entityId,
+                sensorType: this.extractSensorType(entityId),
+                value: parseFloat(state.state as string),
+                unit: (state.attributes as Record<string, unknown>)?.unit_of_measurement as string || '',
+                timestamp: new Date(state.last_updated as string),
                 quality: this.assessSensorReadingQuality(
-                  parseFloat(state.state),
-                  this.extractSensorType(entity.entity_id),
+                  parseFloat(state.state as string),
+                  this.extractSensorType(entityId),
                   config
                 ),
                 metadata: {
-                  batteryLevel: state.attributes?.battery_level,
-                  signalStrength: state.attributes?.signal_strength,
-                  firmwareVersion: state.attributes?.sw_version
+                  batteryLevel: (state.attributes as Record<string, unknown>)?.battery_level as number | undefined,
+                  signalStrength: (state.attributes as Record<string, unknown>)?.signal_strength as number | undefined,
+                  firmwareVersion: (state.attributes as Record<string, unknown>)?.sw_version as string | undefined
                 }
               }
 
@@ -225,7 +227,7 @@ export class IoTCollector extends BaseCollector {
               ),
               location: {
                 zoneId: device.zone?.id,
-                coordinates: device.localisationInstallation as any
+                coordinates: device.localisationInstallation as { latitude: number; longitude: number } | undefined
               },
               metadata: {
                 batteryLevel: device.niveauBatteriePourcent || undefined,
@@ -247,8 +249,8 @@ export class IoTCollector extends BaseCollector {
   /**
    * Check if sensor entity is relevant
    */
-  private isRelevantSensor(entity: any, deviceTypes: string[]): boolean {
-    const entityId = entity.entity_id.toLowerCase()
+  private isRelevantSensor(entity: Record<string, unknown>, deviceTypes: string[]): boolean {
+    const entityId = (entity.entity_id as string).toLowerCase()
     return deviceTypes.some(type => 
       entityId.includes(type.toLowerCase().replace('_', ''))
     )
@@ -257,13 +259,13 @@ export class IoTCollector extends BaseCollector {
   /**
    * Validate sensor reading
    */
-  private isValidReading(state: any, config: IoTCollectorConfig): boolean {
+  private isValidReading(state: Record<string, unknown>, config: IoTCollectorConfig): boolean {
     // Check if state is numeric
-    const value = parseFloat(state.state)
+    const value = parseFloat(state.state as string)
     if (isNaN(value)) return false
 
     // Check reading age
-    const readingAge = Date.now() - new Date(state.last_updated).getTime()
+    const readingAge = Date.now() - new Date(state.last_updated as string).getTime()
     if (readingAge > config.maxDeviceAge * 60 * 1000) return false
 
     return true
@@ -409,7 +411,7 @@ class HomeAssistantClient {
     private token: string
   ) {}
 
-  async getEntities(): Promise<any[]> {
+  async getEntities(): Promise<Record<string, unknown>[]> {
     const response = await fetch(`${this.baseUrl}/api/states`, {
       headers: {
         'Authorization': `Bearer ${this.token}`,
@@ -424,7 +426,7 @@ class HomeAssistantClient {
     return response.json()
   }
 
-  async getEntityState(entityId: string): Promise<any> {
+  async getEntityState(entityId: string): Promise<Record<string, unknown>> {
     const response = await fetch(`${this.baseUrl}/api/states/${entityId}`, {
       headers: {
         'Authorization': `Bearer ${this.token}`,

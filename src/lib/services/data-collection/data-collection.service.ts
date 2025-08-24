@@ -69,7 +69,7 @@ export interface DataCollectionMetrics {
   dataVolumeBytes: number
   enrichmentsPending: number
   syncsPending: number
-  collectorMetrics: { [type: string]: any }
+  collectorMetrics: { [type: string]: Record<string, unknown> }
 }
 
 /**
@@ -153,12 +153,12 @@ export class DataCollectionService extends EventEmitter {
       })
 
       // Collection error
-      collector.on('collectionError', (error: any) => {
+      collector.on('collectionError', (error: Error | Record<string, unknown>) => {
         this.handleCollectionError(type, error)
       })
 
       // Configuration updates
-      collector.on('configUpdated', (config: any) => {
+      collector.on('configUpdated', (config: Record<string, unknown>) => {
         this.emit('collectorConfigUpdated', { type, config })
       })
     }
@@ -225,20 +225,20 @@ export class DataCollectionService extends EventEmitter {
       if (this.isRunning) {
         await this.performCollection(type, collector, collectorConfig)
       }
-    }, collectorConfig.frequencyMs)
+    }, collectorConfig.frequencyMs as number)
 
     this.collectionIntervals.set(type, interval)
     this.emit('collectorScheduled', { 
       type, 
-      frequency: collectorConfig.frequencyMs,
-      nextCollection: new Date(Date.now() + collectorConfig.frequencyMs)
+      frequency: collectorConfig.frequencyMs as number,
+      nextCollection: new Date(Date.now() + (collectorConfig.frequencyMs as number))
     })
   }
 
   /**
    * Perform single collection for a collector
    */
-  private async performCollection(type: string, collector: BaseCollector, config: any): Promise<void> {
+  private async performCollection(type: string, collector: BaseCollector, config: Record<string, unknown>): Promise<void> {
     const startTime = Date.now()
 
     try {
@@ -297,7 +297,7 @@ export class DataCollectionService extends EventEmitter {
   /**
    * Handle collection error
    */
-  private handleCollectionError(type: string, error: any): void {
+  private handleCollectionError(type: string, error: Error | Record<string, unknown>): void {
     this.metrics.failedCollections++
     
     // Log error details
@@ -305,7 +305,7 @@ export class DataCollectionService extends EventEmitter {
       collector: type,
       error,
       timestamp: new Date(),
-      retryScheduled: error.attempt <= this.config.sync.maxRetries
+      retryScheduled: (error as Record<string, unknown>).attempt ? (error as Record<string, unknown>).attempt as number <= this.config.sync.maxRetries : false
     })
 
     // Store error for analysis
@@ -323,9 +323,10 @@ export class DataCollectionService extends EventEmitter {
     // Store in DonneesCollectees table
     const donneesCollectees = await this.prisma.donneesCollectees.create({
       data: {
-        sourceId: sourceCollecte.id,
+        sourceId: sourceCollecte.id as string,
         timestamp: result.timestamp,
-        donneesRaw: result.data,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        donneesRaw: result.data as any,
         dureeCollecteMs: result.metadata.collectionDuration,
         scoreQualite: result.quality.score,
         tailleDonnees: result.metadata.dataSize,
@@ -334,7 +335,7 @@ export class DataCollectionService extends EventEmitter {
     })
 
     // Update source statistics
-    await this.updateSourceStats(sourceCollecte.id, true)
+    await this.updateSourceStats(sourceCollecte.id as string, true)
 
     this.emit('dataStored', { type, dataId: donneesCollectees.id })
   }
@@ -418,10 +419,10 @@ export class DataCollectionService extends EventEmitter {
   /**
    * Get or create source configuration in database
    */
-  private async getOrCreateSource(type: string): Promise<any> {
+  private async getOrCreateSource(type: string): Promise<Record<string, unknown>> {
     const existing = await this.prisma.sourceCollecte.findFirst({
       where: {
-        type: type.toUpperCase() as any,
+        type: type.toUpperCase() as 'IOT_HOME_ASSISTANT' | 'WEATHER_API' | 'PHOTO_LOCAL' | 'MANUAL_INPUT' | 'EXTERNAL_API',
         jardinId: this.config.gardenId,
         utilisateurId: this.config.userId
       }
@@ -437,8 +438,9 @@ export class DataCollectionService extends EventEmitter {
         utilisateurId: this.config.userId,
         nom: `${type.charAt(0).toUpperCase() + type.slice(1)} Collector`,
         type: this.mapCollectorTypeToEnum(type),
-        configuration: collectorConfig,
-        frequenceMs: collectorConfig?.frequencyMs || 60000
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        configuration: collectorConfig as any,
+        frequenceMs: (collectorConfig?.frequencyMs as number) || 60000
       }
     })
   }
@@ -447,7 +449,7 @@ export class DataCollectionService extends EventEmitter {
    * Update source statistics
    */
   private async updateSourceStats(sourceId: string, success: boolean): Promise<void> {
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       derniereCollecteA: new Date(),
       totalCollectes: { increment: 1 }
     }
@@ -467,12 +469,12 @@ export class DataCollectionService extends EventEmitter {
   /**
    * Store collection error for analysis
    */
-  private async storeCollectionError(type: string, error: any): Promise<void> {
+  private async storeCollectionError(type: string, error: Error | Record<string, unknown>): Promise<void> {
     try {
       const source = await this.getOrCreateSource(type)
       
       await this.prisma.sourceCollecte.update({
-        where: { id: source.id },
+        where: { id: source.id as string },
         data: {
           derniereErreur: error.message || String(error),
           erreurCount: { increment: 1 }
@@ -516,7 +518,7 @@ export class DataCollectionService extends EventEmitter {
         source: {
           jardinId: this.config.gardenId
         },
-        collecteA: {
+        timestamp: {
           gte: todayStart
         }
       }
@@ -545,7 +547,7 @@ export class DataCollectionService extends EventEmitter {
 
   // Helper methods
 
-  private getCollectorConfig(type: string): any {
+  private getCollectorConfig(type: string): Record<string, unknown> | undefined {
     return this.config.collectors[type as keyof typeof this.config.collectors]
   }
 
@@ -568,11 +570,11 @@ export class DataCollectionService extends EventEmitter {
     // Update collector-specific metrics
     const collector = this.collectors.get(type)
     if (collector) {
-      this.metrics.collectorMetrics[type] = collector.getMetrics()
+      this.metrics.collectorMetrics[type] = collector.getMetrics() as unknown as Record<string, unknown>
     }
   }
 
-  private calculateDataSize(data: any): number {
+  private calculateDataSize(data: Record<string, unknown>): number {
     try {
       return new Blob([JSON.stringify(data)]).size
     } catch {
@@ -580,7 +582,7 @@ export class DataCollectionService extends EventEmitter {
     }
   }
 
-  private generateCollectionSummary(type: string, result: CollectionResult): any {
+  private generateCollectionSummary(type: string, result: CollectionResult): Record<string, unknown> {
     return {
       type,
       lastCollection: result.timestamp,
@@ -595,7 +597,7 @@ export class DataCollectionService extends EventEmitter {
     return priorities[type as keyof typeof priorities] || 5
   }
 
-  private getEnrichmentConfig(type: string): any {
+  private getEnrichmentConfig(type: string): Record<string, unknown> {
     return { type, autoProcess: true }
   }
 
@@ -604,14 +606,14 @@ export class DataCollectionService extends EventEmitter {
     return ['mobile-001', 'desktop-001', 'tv-001']
   }
 
-  private mapCollectorTypeToEnum(type: string): any {
+  private mapCollectorTypeToEnum(type: string): 'IOT_HOME_ASSISTANT' | 'WEATHER_API' | 'PHOTO_LOCAL' | 'MANUAL_INPUT' | 'EXTERNAL_API' {
     const mapping = {
       iot: 'IOT_HOME_ASSISTANT',
       weather: 'WEATHER_API',
       photo: 'PHOTO_LOCAL',
       manual: 'MANUAL_INPUT'
     }
-    return mapping[type as keyof typeof mapping] || 'EXTERNAL_API'
+    return (mapping[type as keyof typeof mapping] as 'IOT_HOME_ASSISTANT' | 'WEATHER_API' | 'PHOTO_LOCAL' | 'MANUAL_INPUT' | 'EXTERNAL_API') || 'EXTERNAL_API'
   }
 
   private assessOverallHealth(): CollectionStatus['healthStatus'] {

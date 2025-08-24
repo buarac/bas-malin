@@ -9,7 +9,7 @@
  */
 
 import { BaseCollector, CollectorConfig } from '../base-collector'
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client'
 
 export interface ManualDataCollectorConfig extends CollectorConfig {
   gardenId: string
@@ -31,7 +31,7 @@ export interface ManualEntry {
   submittedAt: Date
   zoneId?: string
   instanceCultureId?: string
-  data: any
+  data: Record<string, unknown>
   metadata: {
     inputMethod: 'keyboard' | 'voice' | 'form' | 'quick_capture'
     deviceType: 'mobile' | 'desktop' | 'tv'
@@ -55,7 +55,7 @@ export interface ManualEntry {
   }
 }
 
-export interface ManualDataCollectionResult {
+export interface ManualDataCollectionResult extends Record<string, unknown> {
   type: 'manual_input'
   gardenId: string
   deviceId: string
@@ -221,7 +221,7 @@ export class ManualDataCollector extends BaseCollector {
           metadata: {
             inputMethod: this.inferInputMethod(intervention),
             deviceType: this.inferDeviceType(intervention),
-            location: intervention.geolocalisation as any,
+            location: intervention.geolocalisation as { latitude: number; longitude: number } | undefined,
             confidence: this.assessInputConfidence(intervention),
             language: 'fr', // Default
             sessionId: undefined
@@ -301,8 +301,8 @@ export class ManualDataCollector extends BaseCollector {
           },
           metadata: {
             inputMethod: 'form', // Harvests typically use forms
-            deviceType: this.inferDeviceFromLocation(harvest.localisationRecolte as any),
-            location: harvest.localisationRecolte as any,
+            deviceType: this.inferDeviceFromLocation(harvest.localisationRecolte as Record<string, unknown> | null),
+            location: harvest.localisationRecolte as { latitude: number; longitude: number } | undefined,
             confidence: 0.9, // Manual harvest data is usually reliable
             language: 'fr'
           },
@@ -358,7 +358,7 @@ export class ManualDataCollector extends BaseCollector {
             lte: endTime
           },
           metadonneesActivite: {
-            not: null
+            not: Prisma.AnyNull
           }
         },
         include: {
@@ -367,7 +367,7 @@ export class ManualDataCollector extends BaseCollector {
       })
 
       for (const activity of activities) {
-        const metadata = activity.metadonneesActivite as any
+        const metadata = activity.metadonneesActivite as Record<string, unknown>
         
         // Filter for activities that look like quick notes
         if (this.isQuickNoteActivity(metadata)) {
@@ -383,21 +383,21 @@ export class ManualDataCollector extends BaseCollector {
               content: metadata.content || metadata.note,
               voice: metadata.isVoiceTranscription || false,
               tags: metadata.tags || [],
-              confidence: metadata.transcriptionConfidence
+              confidence: (metadata.transcriptionConfidence as number) || 0.7
             },
             metadata: {
               inputMethod: metadata.isVoiceTranscription ? 'voice' : 'keyboard',
-              deviceType: activity.typeAppareil?.toLowerCase() as any || 'mobile',
-              location: activity.geolocalisation as any,
-              confidence: metadata.transcriptionConfidence || 0.7,
-              language: metadata.language || 'fr',
-              sessionId: metadata.sessionId
+              deviceType: (activity.typeAppareil?.toLowerCase() as 'mobile' | 'desktop' | 'tv') || 'mobile',
+              location: activity.geolocalisation as { latitude: number; longitude: number } | undefined,
+              confidence: (metadata.transcriptionConfidence as number) || 0.7,
+              language: (metadata.language as string) || 'fr',
+              sessionId: metadata.sessionId as string
             },
             validation: {
               isComplete: !!metadata.content,
               hasErrors: false,
-              confidence: metadata.transcriptionConfidence || 0.7,
-              issues: metadata.transcriptionErrors || []
+              confidence: (metadata.transcriptionConfidence as number) || 0.7,
+              issues: (metadata.transcriptionErrors as string[]) || []
             },
             sync: {
               needsSync: true,
@@ -511,25 +511,25 @@ export class ManualDataCollector extends BaseCollector {
     return user?.id || 'default-user'
   }
 
-  private inferInputMethod(intervention: any): ManualEntry['metadata']['inputMethod'] {
+  private inferInputMethod(intervention: Record<string, unknown>): ManualEntry['metadata']['inputMethod'] {
     // Heuristics based on intervention data
-    if (intervention.notes && intervention.notes.length < 50) return 'quick_capture'
+    if (intervention.notes && (intervention.notes as string).length < 50) return 'quick_capture'
     if (intervention.detailsIntervention) return 'form'
     return 'keyboard'
   }
 
-  private inferDeviceType(intervention: any): ManualEntry['metadata']['deviceType'] {
+  private inferDeviceType(intervention: Record<string, unknown>): ManualEntry['metadata']['deviceType'] {
     // Heuristics based on data patterns
     if (intervention.geolocalisation) return 'mobile'
     if (intervention.photos && Array.isArray(intervention.photos) && intervention.photos.length > 0) return 'mobile'
     return 'desktop'
   }
 
-  private inferDeviceFromLocation(location: any): ManualEntry['metadata']['deviceType'] {
+  private inferDeviceFromLocation(location: Record<string, unknown> | null): ManualEntry['metadata']['deviceType'] {
     return location ? 'mobile' : 'desktop'
   }
 
-  private assessInputConfidence(intervention: any): number {
+  private assessInputConfidence(intervention: Record<string, unknown>): number {
     let confidence = 0.5
 
     // More complete data = higher confidence
@@ -541,22 +541,22 @@ export class ManualDataCollector extends BaseCollector {
     return Math.min(1, confidence)
   }
 
-  private validateInterventionCompleteness(intervention: any): boolean {
+  private validateInterventionCompleteness(intervention: Record<string, unknown>): boolean {
     return !!(
       intervention.dateReelle &&
       (intervention.instanceCultureId || intervention.zoneId)
     )
   }
 
-  private validateHarvestCompleteness(harvest: any): boolean {
+  private validateHarvestCompleteness(harvest: Record<string, unknown>): boolean {
     return !!(
       harvest.dateRecolte &&
       harvest.zoneId &&
-      (harvest.poidsTotalKg > 0 || harvest.quantiteUnites > 0)
+      ((harvest.poidsTotalKg as number) > 0 || (harvest.quantiteUnites as number) > 0)
     )
   }
 
-  private isQuickNoteActivity(metadata: any): boolean {
+  private isQuickNoteActivity(metadata: Record<string, unknown>): boolean {
     return !!(
       metadata &&
       (metadata.content || metadata.note) &&

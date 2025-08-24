@@ -16,8 +16,8 @@ export interface EnrichmentProcessor {
   type: string
   priority: number
   enabled: boolean
-  process(data: any, context: EnrichmentContext): Promise<EnrichmentResult>
-  canProcess(dataType: string, data: any): boolean
+  process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult>
+  canProcess(dataType: string, data: Record<string, unknown>): boolean
 }
 
 export interface EnrichmentContext {
@@ -25,9 +25,9 @@ export interface EnrichmentContext {
   timestamp: Date
   gardenId: string
   zoneId?: string
-  historicalData?: any[]
-  weatherData?: any
-  userPreferences?: any
+  historicalData?: Record<string, unknown>[]
+  weatherData?: Record<string, unknown>
+  userPreferences?: Record<string, unknown>
 }
 
 export interface EnrichmentResult {
@@ -35,13 +35,13 @@ export interface EnrichmentResult {
   confidence: number // 0.0 to 1.0
   processingTime: number
   cost?: number // Processing cost in euros if applicable
-  result: any
-  metadata?: any
+  result: Record<string, unknown>
+  metadata?: Record<string, unknown>
   errors?: string[]
 }
 
 export interface EnrichedData {
-  originalData: any
+  originalData: Record<string, unknown>
   enrichments: EnrichmentResult[]
   startTime: number
   processingTime: number
@@ -58,7 +58,7 @@ export class EnrichmentPipelineService extends EventEmitter {
   private processingQueue: Array<{
     id: string
     dataType: string
-    data: any
+    data: Record<string, unknown>
     context: EnrichmentContext
     priority: number
   }> = []
@@ -103,7 +103,7 @@ export class EnrichmentPipelineService extends EventEmitter {
    */
   async process(
     dataType: string,
-    data: any,
+    data: Record<string, unknown>,
     context: EnrichmentContext
   ): Promise<EnrichedData> {
     const startTime = Date.now()
@@ -193,7 +193,7 @@ export class EnrichmentPipelineService extends EventEmitter {
   async queueForProcessing(
     id: string,
     dataType: string,
-    data: any,
+    data: Record<string, unknown>,
     context: EnrichmentContext,
     priority: number = 5
   ): Promise<void> {
@@ -281,13 +281,16 @@ export class EnrichmentPipelineService extends EventEmitter {
         await this.prisma.enrichissementDonnees.create({
           data: {
             donneesCollecteesId: dataId,
-            typeEnrichissement: this.mapEnrichmentType(enrichment.type),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            typeEnrichissement: this.mapEnrichmentType(enrichment.type) as any,
             processeurVersion: '1.0', // Version tracking
-            resultat: enrichment.result,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            resultat: enrichment.result as any,
             scoreConfiance: enrichment.confidence,
             dureeTraitementMs: enrichment.processingTime,
             coutTraitement: enrichment.cost || 0,
-            metadonnees: enrichment.metadata
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            metadonnees: enrichment.metadata as any
           }
         })
       }
@@ -306,9 +309,9 @@ export class EnrichmentPipelineService extends EventEmitter {
     totalCost: number
     queueLength: number
     currentJobs: number
-    processorStats: { [type: string]: any }
+    processorStats: { [type: string]: Record<string, unknown> }
   } {
-    const processorStats: { [type: string]: any } = {}
+    const processorStats: { [type: string]: Record<string, unknown> } = {}
     
     for (const [type, processor] of this.processors) {
       processorStats[type] = {
@@ -337,7 +340,7 @@ export class EnrichmentPipelineService extends EventEmitter {
   /**
    * Map enrichment type to enum
    */
-  private mapEnrichmentType(type: string): any {
+  private mapEnrichmentType(type: string): 'PHOTO_ANALYSIS' | 'IOT_ANALYSIS' | 'WEATHER_ANALYSIS' | 'MANUAL_INPUT_ANALYSIS' | 'CONTEXT_ENRICHMENT' | 'UNKNOWN' {
     const mapping: { [key: string]: string } = {
       'ai_image_analysis': 'AI_IMAGE_ANALYSIS',
       'iot_pattern_detection': 'AI_PATTERN_DETECTION',
@@ -347,7 +350,7 @@ export class EnrichmentPipelineService extends EventEmitter {
       'contextual': 'CONTEXTUAL'
     }
     
-    return mapping[type] || 'CONTEXTUAL'
+    return (mapping[type] || 'CONTEXT_ENRICHMENT') as 'PHOTO_ANALYSIS' | 'IOT_ANALYSIS' | 'WEATHER_ANALYSIS' | 'MANUAL_INPUT_ANALYSIS' | 'CONTEXT_ENRICHMENT' | 'UNKNOWN'
   }
 
   /**
@@ -375,31 +378,31 @@ class AIImageAnalysisProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
     return dataType === 'photo' && 
-           data.photos && 
+           Boolean(data.photos) && 
            Array.isArray(data.photos) && 
-           data.photos.length > 0
+           (data.photos as unknown[]).length > 0
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     const startTime = Date.now()
     let totalCost = 0
-    const results: any[] = []
+    const results: Record<string, unknown>[] = []
 
     try {
       // Process each photo
-      for (const photo of data.photos) {
-        if (photo.processingFlags?.needsAIAnalysis) {
+      for (const photo of (data.photos as Record<string, unknown>[])) {
+        if ((photo.processingFlags as Record<string, unknown>)?.needsAIAnalysis) {
           const analysis = await this.analyzePhoto(photo, context)
           results.push(analysis)
-          totalCost += analysis.cost || 0
+          totalCost += (analysis.cost as number) || 0
         }
       }
 
       return {
         type: this.type,
-        confidence: results.length > 0 ? results.reduce((sum, r) => sum + r.confidence, 0) / results.length : 0,
+        confidence: results.length > 0 ? results.reduce((sum, r) => sum + ((r.confidence as number) || 0), 0) / results.length : 0,
         processingTime: Date.now() - startTime,
         cost: totalCost,
         result: {
@@ -414,13 +417,13 @@ class AIImageAnalysisProcessor implements EnrichmentProcessor {
         confidence: 0,
         processingTime: Date.now() - startTime,
         cost: totalCost,
-        result: null,
+        result: {},
         errors: [String(error)]
       }
     }
   }
 
-  private async analyzePhoto(photo: any, context: EnrichmentContext): Promise<any> {
+  private async analyzePhoto(photo: Record<string, unknown>, context: EnrichmentContext): Promise<Record<string, unknown>> {
     // Simplified OpenAI GPT-4 Vision call
     const prompt = `Analyze this garden photo taken on ${context.timestamp.toLocaleDateString()} in a French garden. 
     Identify:
@@ -459,12 +462,12 @@ class AIImageAnalysisProcessor implements EnrichmentProcessor {
     }
   }
 
-  private generatePhotoSummary(analyses: any[]): any {
+  private generatePhotoSummary(analyses: Record<string, unknown>[]): Record<string, unknown> {
     return {
       totalPhotos: analyses.length,
       plantsIdentified: analyses.filter(a => a.plantIdentification).length,
-      healthyPlants: analyses.filter(a => a.healthAssessment?.overall === 'healthy').length,
-      issuesDetected: analyses.reduce((sum, a) => sum + (a.healthAssessment?.issues?.length || 0), 0)
+      healthyPlants: analyses.filter(a => (a.healthAssessment as Record<string, unknown>)?.overall === 'healthy').length,
+      issuesDetected: analyses.reduce((sum, a) => sum + (((a.healthAssessment as Record<string, unknown>)?.issues as unknown[])?.length || 0), 0)
     }
   }
 }
@@ -479,20 +482,20 @@ class IoTPatternDetectionProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
     return dataType === 'iot' && 
-           data.readings && 
+           Boolean(data.readings) && 
            Array.isArray(data.readings) && 
-           data.readings.length > 0
+           (data.readings as unknown[]).length > 0
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     const startTime = Date.now()
 
     try {
-      const patterns = await this.detectPatterns(data.readings, context)
-      const anomalies = await this.detectAnomalies(data.readings, context)
-      const trends = await this.analyzeTrends(data.readings, context)
+      const patterns = await this.detectPatterns(data.readings as Record<string, unknown>[], context)
+      const anomalies = await this.detectAnomalies(data.readings as Record<string, unknown>[], context)
+      const trends = await this.analyzeTrends(data.readings as Record<string, unknown>[], context)
 
       return {
         type: this.type,
@@ -511,13 +514,13 @@ class IoTPatternDetectionProcessor implements EnrichmentProcessor {
         type: this.type,
         confidence: 0,
         processingTime: Date.now() - startTime,
-        result: null,
+        result: {},
         errors: [String(error)]
       }
     }
   }
 
-  private async detectPatterns(readings: any[], context: EnrichmentContext): Promise<any> {
+  private async detectPatterns(readings: Record<string, unknown>[], context: EnrichmentContext): Promise<Record<string, unknown>> {
     // Simplified pattern detection
     const temperatureReadings = readings.filter(r => r.sensorType === 'temperature')
     const humidityReadings = readings.filter(r => r.sensorType === 'humidity')
@@ -529,8 +532,8 @@ class IoTPatternDetectionProcessor implements EnrichmentProcessor {
     }
   }
 
-  private async detectAnomalies(readings: any[], context: EnrichmentContext): Promise<any> {
-    const anomalies: any[] = []
+  private async detectAnomalies(readings: Record<string, unknown>[], context: EnrichmentContext): Promise<Record<string, unknown>> {
+    const anomalies: Record<string, unknown>[] = []
 
     for (const reading of readings) {
       if (this.isAnomalousReading(reading)) {
@@ -538,16 +541,16 @@ class IoTPatternDetectionProcessor implements EnrichmentProcessor {
           deviceId: reading.deviceId,
           sensorType: reading.sensorType,
           value: reading.value,
-          expectedRange: this.getExpectedRange(reading.sensorType),
+          expectedRange: this.getExpectedRange(reading.sensorType as string),
           severity: this.calculateSeverity(reading)
         })
       }
     }
 
-    return anomalies
+    return { anomalies }
   }
 
-  private async analyzeTrends(readings: any[], context: EnrichmentContext): Promise<any> {
+  private async analyzeTrends(readings: Record<string, unknown>[], context: EnrichmentContext): Promise<Record<string, unknown>> {
     // Get historical readings for trend analysis
     const historicalData = await this.getHistoricalReadings(context.gardenId, context.timestamp)
     
@@ -559,23 +562,25 @@ class IoTPatternDetectionProcessor implements EnrichmentProcessor {
   }
 
   // Simplified helper methods
-  private detectDailyCycles(readings: any[]): any { return { detected: false } }
-  private detectSensorCorrelations(readings: any[]): any { return [] }
-  private calculateAverages(readings: any[]): any { 
+  private detectDailyCycles(readings: Record<string, unknown>[]): Record<string, unknown> { return { detected: false } }
+  private detectSensorCorrelations(readings: Record<string, unknown>[]): Record<string, unknown>[] { return [] }
+  private calculateAverages(readings: Record<string, unknown>[]): Record<string, unknown> { 
     return readings.reduce((acc, r) => {
-      if (!acc[r.sensorType]) acc[r.sensorType] = { sum: 0, count: 0 }
-      acc[r.sensorType].sum += r.value
-      acc[r.sensorType].count += 1
+      const sensorType = r.sensorType as string
+      if (!acc[sensorType]) acc[sensorType] = { sum: 0, count: 0 }
+      const sensor = acc[sensorType] as { sum: number; count: number }
+      sensor.sum += (r.value as number)
+      sensor.count += 1
       return acc
-    }, {})
+    }, {} as Record<string, { sum: number; count: number }>)
   }
-  private isAnomalousReading(reading: any): boolean { return reading.quality === 'poor' }
-  private getExpectedRange(sensorType: string): any { return { min: 0, max: 100 } }
-  private calculateSeverity(reading: any): string { return 'low' }
-  private async getHistoricalReadings(gardenId: string, timestamp: Date): Promise<any[]> { return [] }
-  private calculateTrend(current: any[], historical: any[], type: string): any { return { direction: 'stable' } }
-  private generatePredictions(current: any[], historical: any[]): any { return [] }
-  private generateIoTInsights(patterns: any, anomalies: any, trends: any): string[] {
+  private isAnomalousReading(reading: Record<string, unknown>): boolean { return reading.quality === 'poor' }
+  private getExpectedRange(sensorType: string): Record<string, unknown> { return { min: 0, max: 100 } }
+  private calculateSeverity(reading: Record<string, unknown>): string { return 'low' }
+  private async getHistoricalReadings(gardenId: string, timestamp: Date): Promise<Record<string, unknown>[]> { return [] }
+  private calculateTrend(current: Record<string, unknown>[], historical: Record<string, unknown>[], type: string): Record<string, unknown> { return { direction: 'stable' } }
+  private generatePredictions(current: Record<string, unknown>[], historical: Record<string, unknown>[]): Record<string, unknown>[] { return [] }
+  private generateIoTInsights(patterns: Record<string, unknown>, anomalies: Record<string, unknown>, trends: Record<string, unknown>): string[] {
     return ['IoT sensors operating normally', 'No critical issues detected']
   }
 }
@@ -588,11 +593,11 @@ class GeolocationEnrichmentProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
-    return data.location || (data.photos && data.photos.some((p: any) => p.location))
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
+    return Boolean(data.location) || (Boolean(data.photos) && Array.isArray(data.photos) && (data.photos as Record<string, unknown>[]).some((p: Record<string, unknown>) => Boolean(p.location)))
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     // Implementation would add geolocation enrichment
     return {
       type: this.type,
@@ -610,11 +615,11 @@ class TemporalCorrelationProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
     return true // Can process any data with temporal context
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     // Implementation would correlate with historical data
     return {
       type: this.type,
@@ -632,11 +637,11 @@ class CalculationProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
     return dataType === 'iot' || dataType === 'photo' // Data that can be calculated on
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     // Implementation would add calculations (growth rates, efficiency metrics)
     return {
       type: this.type,
@@ -654,11 +659,11 @@ class ContextualEnrichmentProcessor implements EnrichmentProcessor {
 
   constructor(private prisma: PrismaClient) {}
 
-  canProcess(dataType: string, data: any): boolean {
+  canProcess(dataType: string, data: Record<string, unknown>): boolean {
     return true // Can add context to any data
   }
 
-  async process(data: any, context: EnrichmentContext): Promise<EnrichmentResult> {
+  async process(data: Record<string, unknown>, context: EnrichmentContext): Promise<EnrichmentResult> {
     // Implementation would add contextual information
     return {
       type: this.type,

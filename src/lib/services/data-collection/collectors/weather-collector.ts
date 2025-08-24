@@ -94,7 +94,7 @@ export interface WeatherForecast {
   }
 }
 
-export interface WeatherCollectionResult {
+export interface WeatherCollectionResult extends Record<string, unknown> {
   type: 'weather'
   location: {
     latitude: number
@@ -250,49 +250,49 @@ export class WeatherCollector extends BaseCollector {
   /**
    * Parse current weather response
    */
-  private parseCurrentWeather(data: any): WeatherReading {
-    const current = data.current
-    const location = data.location
+  private parseCurrentWeather(data: Record<string, unknown>): WeatherReading {
+    const current = data.current as Record<string, unknown>
+    const location = data.location as Record<string, unknown>
 
     return {
       timestamp: new Date(),
       location: {
-        latitude: location.lat,
-        longitude: location.lon,
-        region: location.region,
-        country: location.country
+        latitude: location.lat as number,
+        longitude: location.lon as number,
+        region: location.region as string,
+        country: location.country as string
       },
       current: {
         temperature: {
-          celsius: current.temp_c,
-          fahrenheit: current.temp_f,
-          feelsLike: current.feelslike_c
+          celsius: current.temp_c as number,
+          fahrenheit: current.temp_f as number,
+          feelsLike: current.feelslike_c as number
         },
-        humidity: current.humidity,
-        pressure: current.pressure_mb,
+        humidity: current.humidity as number,
+        pressure: current.pressure_mb as number,
         wind: {
-          speed: current.wind_kph,
-          direction: current.wind_degree,
-          gust: current.gust_kph
+          speed: current.wind_kph as number,
+          direction: current.wind_degree as number,
+          gust: current.gust_kph as number
         },
-        precipitation: current.precip_mm,
-        uvIndex: current.uv,
-        visibility: current.vis_km,
-        cloudCover: current.cloud,
-        conditions: current.condition.text,
-        conditionCode: current.condition.code
+        precipitation: current.precip_mm as number,
+        uvIndex: current.uv as number,
+        visibility: current.vis_km as number,
+        cloudCover: current.cloud as number,
+        conditions: (current.condition as Record<string, unknown>).text as string,
+        conditionCode: (current.condition as Record<string, unknown>).code as number
       },
       soil: {
-        temperature: this.estimateSoilTemperature(current.temp_c),
-        moisture: this.estimateSoilMoisture(current.precip_mm, current.humidity)
+        temperature: this.estimateSoilTemperature(current.temp_c as number),
+        moisture: this.estimateSoilMoisture(current.precip_mm as number, current.humidity as number)
       },
       gardenMetrics: this.calculateGardenMetrics({
-        temperature: current.temp_c,
-        humidity: current.humidity,
-        windSpeed: current.wind_kph,
-        precipitation: current.precip_mm,
-        uvIndex: current.uv,
-        conditions: current.condition.text
+        temperature: current.temp_c as number,
+        humidity: current.humidity as number,
+        windSpeed: current.wind_kph as number,
+        precipitation: current.precip_mm as number,
+        uvIndex: current.uv as number,
+        conditions: (current.condition as Record<string, unknown>).text as string
       })
     }
   }
@@ -300,40 +300,42 @@ export class WeatherCollector extends BaseCollector {
   /**
    * Parse forecast data
    */
-  private parseForecast(data: any): WeatherForecast[] {
-    return data.forecast.forecastday.map((day: any) => {
-      const dayData = day.day
+  private parseForecast(data: Record<string, unknown>): WeatherForecast[] {
+    const forecast = data.forecast as Record<string, unknown>
+    const forecastDays = forecast.forecastday as Record<string, unknown>[]
+    return forecastDays.map((day: Record<string, unknown>) => {
+      const dayData = day.day as Record<string, unknown>
       
       return {
-        date: new Date(day.date),
+        date: new Date(day.date as string),
         temperature: {
-          min: dayData.mintemp_c,
-          max: dayData.maxtemp_c,
-          avg: dayData.avgtemp_c
+          min: dayData.mintemp_c as number,
+          max: dayData.maxtemp_c as number,
+          avg: dayData.avgtemp_c as number
         },
         humidity: {
-          min: dayData.mintemp_c < 10 ? 90 : 50, // Estimate min humidity
-          max: dayData.avghumidity + 20, // Estimate max humidity
-          avg: dayData.avghumidity
+          min: (dayData.mintemp_c as number) < 10 ? 90 : 50, // Estimate min humidity
+          max: (dayData.avghumidity as number) + 20, // Estimate max humidity
+          avg: dayData.avghumidity as number
         },
         precipitation: {
-          probability: dayData.daily_chance_of_rain,
-          total: dayData.totalprecip_mm,
-          type: this.determinePrecipitationType(dayData.totalprecip_mm, dayData.avgtemp_c)
+          probability: dayData.daily_chance_of_rain as number,
+          total: dayData.totalprecip_mm as number,
+          type: this.determinePrecipitationType(dayData.totalprecip_mm as number, dayData.avgtemp_c as number)
         },
         wind: {
-          maxSpeed: dayData.maxwind_kph,
-          avgSpeed: dayData.maxwind_kph * 0.6, // Estimate
+          maxSpeed: dayData.maxwind_kph as number,
+          avgSpeed: (dayData.maxwind_kph as number) * 0.6, // Estimate
           direction: 0 // Not available in forecast
         },
-        conditions: dayData.condition.text,
-        conditionCode: dayData.condition.code,
-        uvIndex: dayData.uv,
+        conditions: (dayData.condition as Record<string, unknown>).text as string,
+        conditionCode: (dayData.condition as Record<string, unknown>).code as number,
+        uvIndex: dayData.uv as number,
         gardenSuitability: this.assessGardenSuitability({
-          temperature: dayData.avgtemp_c,
-          precipitation: dayData.totalprecip_mm,
-          windSpeed: dayData.maxwind_kph,
-          uvIndex: dayData.uv
+          temperature: dayData.avgtemp_c as number,
+          precipitation: dayData.totalprecip_mm as number,
+          windSpeed: dayData.maxwind_kph as number,
+          uvIndex: dayData.uv as number
         })
       }
     })
@@ -342,49 +344,51 @@ export class WeatherCollector extends BaseCollector {
   /**
    * Parse historical weather data
    */
-  private parseHistoricalWeather(data: any): WeatherReading {
-    const histDay = data.forecast.forecastday[0].day
-    const location = data.location
+  private parseHistoricalWeather(data: Record<string, unknown>): WeatherReading {
+    const forecast = data.forecast as Record<string, unknown>
+    const forecastDay = (forecast.forecastday as Record<string, unknown>[])[0]
+    const histDay = forecastDay.day as Record<string, unknown>
+    const location = data.location as Record<string, unknown>
 
     return {
-      timestamp: new Date(data.forecast.forecastday[0].date),
+      timestamp: new Date(forecastDay.date as string),
       location: {
-        latitude: location.lat,
-        longitude: location.lon,
-        region: location.region,
-        country: location.country
+        latitude: location.lat as number,
+        longitude: location.lon as number,
+        region: location.region as string,
+        country: location.country as string
       },
       current: {
         temperature: {
-          celsius: histDay.avgtemp_c,
-          fahrenheit: histDay.avgtemp_f,
-          feelsLike: histDay.avgtemp_c
+          celsius: histDay.avgtemp_c as number,
+          fahrenheit: histDay.avgtemp_f as number,
+          feelsLike: histDay.avgtemp_c as number
         },
-        humidity: histDay.avghumidity,
+        humidity: histDay.avghumidity as number,
         pressure: 1013, // Default - not available in historical
         wind: {
-          speed: histDay.maxwind_kph,
+          speed: histDay.maxwind_kph as number,
           direction: 0,
-          gust: histDay.maxwind_kph
+          gust: histDay.maxwind_kph as number
         },
-        precipitation: histDay.totalprecip_mm,
-        uvIndex: histDay.uv,
+        precipitation: histDay.totalprecip_mm as number,
+        uvIndex: histDay.uv as number,
         visibility: 10, // Default
         cloudCover: 50, // Default
-        conditions: histDay.condition.text,
-        conditionCode: histDay.condition.code
+        conditions: (histDay.condition as Record<string, unknown>).text as string,
+        conditionCode: (histDay.condition as Record<string, unknown>).code as number
       },
       soil: {
-        temperature: this.estimateSoilTemperature(histDay.avgtemp_c),
-        moisture: this.estimateSoilMoisture(histDay.totalprecip_mm, histDay.avghumidity)
+        temperature: this.estimateSoilTemperature(histDay.avgtemp_c as number),
+        moisture: this.estimateSoilMoisture(histDay.totalprecip_mm as number, histDay.avghumidity as number)
       },
       gardenMetrics: this.calculateGardenMetrics({
-        temperature: histDay.avgtemp_c,
-        humidity: histDay.avghumidity,
-        windSpeed: histDay.maxwind_kph,
-        precipitation: histDay.totalprecip_mm,
-        uvIndex: histDay.uv,
-        conditions: histDay.condition.text
+        temperature: histDay.avgtemp_c as number,
+        humidity: histDay.avghumidity as number,
+        windSpeed: histDay.maxwind_kph as number,
+        precipitation: histDay.totalprecip_mm as number,
+        uvIndex: histDay.uv as number,
+        conditions: (histDay.condition as Record<string, unknown>).text as string
       })
     }
   }
@@ -417,7 +421,7 @@ export class WeatherCollector extends BaseCollector {
   /**
    * Calculate garden-specific metrics
    */
-  private calculateGardenMetrics(conditions: {
+  private calculateGardenMetrics(weatherData: {
     temperature: number
     humidity: number
     windSpeed: number
@@ -425,7 +429,7 @@ export class WeatherCollector extends BaseCollector {
     uvIndex: number
     conditions: string
   }): WeatherReading['gardenMetrics'] {
-    const { temperature, humidity, windSpeed, precipitation, uvIndex, conditions } = conditions
+    const { temperature, humidity, windSpeed, precipitation, uvIndex, conditions } = weatherData
 
     // Optimal watering conditions
     const optimalForWatering = 

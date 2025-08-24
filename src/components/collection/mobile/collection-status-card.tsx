@@ -10,7 +10,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -81,7 +81,7 @@ export function CollectionStatusCard({ jardinId }: CollectionStatusCardProps) {
   const [refreshing, setRefreshing] = useState(false)
 
   // Fetch collection status
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     try {
       const response = await fetch(`/api/collection/status?jardinId=${jardinId}`)
       if (response.ok) {
@@ -94,7 +94,7 @@ export function CollectionStatusCard({ jardinId }: CollectionStatusCardProps) {
       setLoading(false)
       setRefreshing(false)
     }
-  }
+  }, [jardinId])
 
   // Manual refresh
   const handleRefresh = async () => {
@@ -107,7 +107,7 @@ export function CollectionStatusCard({ jardinId }: CollectionStatusCardProps) {
     fetchStatus()
     const interval = setInterval(fetchStatus, 30000)
     return () => clearInterval(interval)
-  }, [jardinId])
+  }, [jardinId, fetchStatus])
 
   if (loading) {
     return (
@@ -215,7 +215,7 @@ export function CollectionStatusCard({ jardinId }: CollectionStatusCardProps) {
             <div className="text-lg font-bold text-blue-700">
               {status.collections.today}
             </div>
-            <div className="text-xs text-blue-600">Collectes aujourd'hui</div>
+            <div className="text-xs text-blue-600">Collectes aujourd&apos;hui</div>
           </div>
           <div className="text-center p-2 bg-purple-50 rounded-lg">
             <div className="text-lg font-bold text-purple-700">

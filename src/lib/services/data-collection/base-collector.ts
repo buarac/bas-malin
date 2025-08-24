@@ -10,7 +10,7 @@
 
 import { EventEmitter } from 'events'
 
-export interface CollectionResult<T = any> {
+export interface CollectionResult<T = Record<string, unknown>> {
   type: string
   data: T
   timestamp: Date
@@ -37,7 +37,7 @@ export interface CollectorConfig {
   frequencyMs: number
   retryCount: number
   timeout: number
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface CollectorMetrics {
@@ -70,12 +70,12 @@ export abstract class BaseCollector extends EventEmitter {
   /**
    * Main collection method - implemented by each collector
    */
-  abstract collect(config: any): Promise<any>
+  abstract collect(config: Record<string, unknown>): Promise<Record<string, unknown>>
 
   /**
    * Collect with error handling, retries and metrics
    */
-  async collectSafely(config: any): Promise<CollectionResult> {
+  async collectSafely(config: Record<string, unknown>): Promise<CollectionResult> {
     const startTime = Date.now()
     let retryCount = 0
     let lastError: Error | null = null
@@ -93,17 +93,17 @@ export abstract class BaseCollector extends EventEmitter {
         ])
 
         // Assess data quality
-        const quality = this.assessDataQuality(rawData)
+        const quality = this.assessDataQuality(rawData as Record<string, unknown>)
 
         // Create result
         const result: CollectionResult = {
           type: this.type,
-          data: rawData,
+          data: rawData as Record<string, unknown>,
           timestamp: new Date(),
           quality,
           metadata: {
             collectionDuration: Date.now() - startTime,
-            dataSize: this.calculateDataSize(rawData),
+            dataSize: this.calculateDataSize(rawData as Record<string, unknown>),
             retryCount
           }
         }
@@ -142,7 +142,7 @@ export abstract class BaseCollector extends EventEmitter {
   /**
    * Assess the quality of collected data
    */
-  protected assessDataQuality(data: any): DataQuality {
+  protected assessDataQuality(data: Record<string, unknown>): DataQuality {
     const issues: string[] = []
     let score = 1.0
 
@@ -186,28 +186,28 @@ export abstract class BaseCollector extends EventEmitter {
   /**
    * Assess data freshness - override in specific collectors
    */
-  protected assessDataFreshness(_data: any): number {
+  protected assessDataFreshness(_data: Record<string, unknown>): number {
     return 1.0 // Default: assume fresh
   }
 
   /**
    * Assess data completeness - override in specific collectors
    */
-  protected assessDataCompleteness(_data: any): number {
+  protected assessDataCompleteness(_data: Record<string, unknown>): number {
     return 1.0 // Default: assume complete
   }
 
   /**
    * Assess data validity - override in specific collectors
    */
-  protected assessDataValidity(_data: any): number {
+  protected assessDataValidity(_data: Record<string, unknown>): number {
     return 1.0 // Default: assume valid
   }
 
   /**
    * Calculate estimated data size in bytes
    */
-  protected calculateDataSize(data: any): number {
+  protected calculateDataSize(data: Record<string, unknown>): number {
     try {
       return new Blob([JSON.stringify(data)]).size
     } catch {
@@ -280,7 +280,7 @@ export abstract class BaseCollector extends EventEmitter {
     const recentSuccess = this.metrics.lastSuccess && 
       (Date.now() - this.metrics.lastSuccess.getTime()) < (this.config.frequencyMs * 3)
 
-    return successRate >= 0.8 && (this.metrics.totalCollections === 0 || recentSuccess)
+    return successRate >= 0.8 && (this.metrics.totalCollections === 0 || Boolean(recentSuccess))
   }
 
   /**
