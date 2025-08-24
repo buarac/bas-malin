@@ -1,3 +1,10 @@
+## [1.5.1](https://github.com/buarac/bas-malin/compare/v1.5.0...v1.5.1) (2025-08-24)
+
+
+### Bug Fixes
+
+* correction typescripts ([bf64b54](https://github.com/buarac/bas-malin/commit/bf64b5408921f6cf08850b233fbb0a70492498f8))
+
 # [1.5.0](https://github.com/buarac/bas-malin/compare/v1.4.1...v1.5.0) (2025-08-23)
 
 
